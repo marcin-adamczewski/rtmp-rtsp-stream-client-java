@@ -129,6 +129,8 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
             }
           } catch (CameraAccessException | NullPointerException e) {
             Log.e(TAG, "Error", e);
+          } catch (IllegalStateException e) {
+            reOpenCamera(cameraId != -1 ? cameraId : 0);
           }
         }
 
@@ -395,7 +397,7 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
   }
 
   public void switchCamera() {
-    int cameraId = Integer.parseInt(cameraDevice.getId()) == 1 ? 0 : 1;
+    int cameraId = cameraDevice == null ? 0 : Integer.parseInt(cameraDevice.getId()) == 1 ? 0 : 1;
     reOpenCamera(cameraId);
   }
 
