@@ -9,8 +9,15 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
+
 import com.pedro.encoder.Frame;
+
 import java.nio.ByteBuffer;
+
+import be.tarsos.dsp.AudioDispatcher;
+import be.tarsos.dsp.filters.BandPass;
+import be.tarsos.dsp.io.TarsosDSPAudioFormat;
+import be.tarsos.dsp.io.android.AndroidAudioInputStream;
 
 /**
  * Created by pedro on 19/01/17.
@@ -19,6 +26,7 @@ import java.nio.ByteBuffer;
 public class MicrophoneManager {
 
   private final String TAG = "MicrophoneManager";
+  private final String FILTER_TAG = "MicrophoneManagerFilter";
   private static final int BUFFER_SIZE = 4096;
   protected AudioRecord audioRecord;
   private GetMicrophoneData getMicrophoneData;
@@ -34,6 +42,7 @@ public class MicrophoneManager {
   private boolean muted = false;
   private AudioPostProcessEffect audioPostProcessEffect;
   HandlerThread handlerThread;
+  HandlerThread filterThread;
   private CustomAudioEffect customAudioEffect = new NoAudioEffect();
 
   public MicrophoneManager(GetMicrophoneData getMicrophoneData) {
@@ -136,6 +145,16 @@ public class MicrophoneManager {
 
   private void init() {
     if (audioRecord != null) {
+      final TarsosDSPAudioFormat audioFormat = new TarsosDSPAudioFormat(22050f, 16, 1, true, false);
+      final AndroidAudioInputStream inputStream = new AndroidAudioInputStream(audioRecord, audioFormat);
+      final AudioDispatcher audioDispatcher = new AudioDispatcher(inputStream, BUFFER_SIZE, BUFFER_SIZE / 2);
+      audioDispatcher.addAudioProcessor(new BandPass(440, 500, 1024));
+
+      filterThread = new HandlerThread(FILTER_TAG);
+      filterThread.start();
+      Handler filterHandler = new Handler(filterThread.getLooper());
+      filterHandler.post(audioDispatcher);
+
       audioRecord.startRecording();
       running = true;
       Log.i(TAG, "Microphone started");
@@ -177,11 +196,13 @@ public class MicrophoneManager {
     running = false;
     created = false;
     if (handlerThread != null) {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-        handlerThread.quitSafely();
-      } else {
-        handlerThread.quit();
-      }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            handlerThread.quitSafely();
+            filterThread.quitSafely();
+        } else {
+            handlerThread.quit();
+            filterThread.quit();
+        }
     }
     if (audioRecord != null) {
       audioRecord.setRecordPositionUpdateListener(null);
