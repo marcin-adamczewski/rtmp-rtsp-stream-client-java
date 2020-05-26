@@ -137,15 +137,4 @@ public class ScreenRender {
     this.streamWidth = streamWidth;
     this.streamHeight = streamHeight;
   }
-
-//  public void setFlip(boolean isFlipHorizontal, boolean isFlipVertical) {
-//    Matrix.setIdentityM(scaleMatrix, 0);
-//    Matrix.scaleM(scaleMatrix, 0, isFlipVertical ? -1f : 1f, isFlipHorizontal ? -1f : 1f, 1f);
-//    update();
-//  }
-//
-//  private void update() {
-//    Matrix.setIdentityM(MVPMatrix, 0);
-//    Matrix.multiplyMM(MVPMatrix, 0, scaleMatrix, 0, MVPMatrix, 0);
-//  }
 }

@@ -23,7 +23,6 @@
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:gravity="center"
-      android:text="rtmp://rtmp-global.cloud.vimeo.com/live/3060b920-dba0-41cd-9dd5-4f178589e255"
       android:layout_margin="20dp"
       android:id="@+id/et_rtp_url"
       />
