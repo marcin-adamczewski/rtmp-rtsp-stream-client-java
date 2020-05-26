@@ -39,6 +39,10 @@ public class OffScreenGlThread
   private int encoderWidth, encoderHeight;
   private boolean loadAA = false;
   private int streamRotation;
+  private int flipStreamMode = 4;
+  private boolean isCameraFront = false;
+  private boolean isFlipStreamHorizontal = false;
+  private boolean isFlipStreamVertical = false;
 
   private boolean AAEnabled = false;
   private FpsLimiter fpsLimiter = new FpsLimiter();
@@ -47,6 +51,12 @@ public class OffScreenGlThread
 
   public OffScreenGlThread(Context context) {
     this.context = context;
+  }
+
+  public OffScreenGlThread(Context context, boolean isFlipStreamHorizontal, boolean isFlipStreamVertical) {
+    this.context = context;
+    this.isFlipStreamHorizontal = isFlipStreamHorizontal;
+    this.isFlipStreamVertical = isFlipStreamVertical;
   }
 
   @Override
@@ -178,7 +188,8 @@ public class OffScreenGlThread
           surfaceManager.makeCurrent();
           textureManager.updateFrame();
           textureManager.drawOffScreen();
-          textureManager.drawScreen(encoderWidth, encoderHeight, false, 0, 0, true);
+          textureManager.drawScreen(encoderWidth, encoderHeight, false, flipStreamMode, 0,
+                  isCameraFront, true, isFlipStreamHorizontal, isFlipStreamVertical);
           if (takePhotoCallback != null) {
             takePhotoCallback.onTakePhoto(
                 GlUtil.getBitmap(encoderWidth, encoderHeight, encoderWidth, encoderHeight));
@@ -189,8 +200,8 @@ public class OffScreenGlThread
           synchronized (sync) {
             if (surfaceManagerEncoder != null && !fpsLimiter.limitFPS()) {
               surfaceManagerEncoder.makeCurrent();
-              textureManager.drawScreen(encoderWidth, encoderHeight, false, 0, streamRotation,
-                  false);
+              textureManager.drawScreen(encoderWidth, encoderHeight, false, flipStreamMode, streamRotation,
+                  isCameraFront,false, isFlipStreamHorizontal, isFlipStreamVertical);
               surfaceManagerEncoder.swapBuffer();
             }
           }
@@ -209,6 +220,11 @@ public class OffScreenGlThread
       textureManager.release();
       releaseSurfaceManager();
     }
+  }
+
+  @Override
+  public void setIsCameraFront(boolean isCameraFront) {
+    this.isCameraFront = isCameraFront;
   }
 
   @Override

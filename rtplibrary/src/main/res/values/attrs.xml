@@ -23,6 +23,8 @@
     <attr name="aspectRatioMode"/>
     <attr name="isFlipHorizontal"/>
     <attr name="isFlipVertical"/>
+    <attr name="isStreamFlipHorizontal" format="boolean"/>
+    <attr name="isStreamFlipVertical" format="boolean"/>
   </declare-styleable>
 
   <declare-styleable name="LightOpenGlView">

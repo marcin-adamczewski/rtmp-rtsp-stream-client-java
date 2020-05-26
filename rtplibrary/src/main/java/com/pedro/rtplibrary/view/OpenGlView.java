@@ -28,7 +28,9 @@ public class OpenGlView extends OpenGlViewBase {
   private boolean AAEnabled = false;
   private boolean keepAspectRatio = false;
   private int aspectRatioMode = 0;
+  private boolean isCameraFront = false;
   private boolean isFlipHorizontal = false, isFlipVertical = false;
+  private boolean isStreamFlipHorizontal = false, isStreamFlipVertical = false;
 
   public OpenGlView(Context context) {
     super(context);
@@ -44,6 +46,8 @@ public class OpenGlView extends OpenGlViewBase {
       ManagerRender.numFilters = typedArray.getInt(R.styleable.OpenGlView_numFilters, 1);
       isFlipHorizontal = typedArray.getBoolean(R.styleable.OpenGlView_isFlipHorizontal, false);
       isFlipVertical = typedArray.getBoolean(R.styleable.OpenGlView_isFlipVertical, false);
+      isStreamFlipHorizontal = typedArray.getBoolean(R.styleable.OpenGlView_isStreamFlipHorizontal, false);
+      isStreamFlipVertical = typedArray.getBoolean(R.styleable.OpenGlView_isStreamFlipVertical, false);
     } finally {
       typedArray.recycle();
     }
@@ -113,6 +117,11 @@ public class OpenGlView extends OpenGlViewBase {
   }
 
   @Override
+  public void setIsCameraFront(boolean isCameraFront) {
+    this.isCameraFront = isCameraFront;
+  }
+
+  @Override
   public void run() {
     releaseSurfaceManager();
     surfaceManager = new SurfaceManager(getHolder().getSurface());
@@ -127,8 +136,8 @@ public class OpenGlView extends OpenGlViewBase {
           surfaceManager.makeCurrent();
           managerRender.updateFrame();
           managerRender.drawOffScreen();
-          managerRender.drawScreen(previewWidth, previewHeight, keepAspectRatio, aspectRatioMode, 0,
-              true);
+          managerRender.drawScreen(previewWidth, previewHeight, keepAspectRatio, aspectRatioMode,
+                  0, true, isCameraFront, isStreamFlipHorizontal, isStreamFlipVertical);
           if (takePhotoCallback != null) {
             takePhotoCallback.onTakePhoto(
                 GlUtil.getBitmap(previewWidth, previewHeight, encoderWidth, encoderHeight));
@@ -140,7 +149,7 @@ public class OpenGlView extends OpenGlViewBase {
             if (surfaceManagerEncoder != null && !fpsLimiter.limitFPS()) {
               surfaceManagerEncoder.makeCurrent();
               managerRender.drawScreen(encoderWidth, encoderHeight, false, aspectRatioMode,
-                  streamRotation, false);
+                  streamRotation, false, isCameraFront, isStreamFlipHorizontal, isStreamFlipVertical);
               surfaceManagerEncoder.swapBuffer();
             }
           }

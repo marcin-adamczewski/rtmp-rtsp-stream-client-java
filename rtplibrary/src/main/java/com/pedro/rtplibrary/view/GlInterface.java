@@ -100,4 +100,6 @@ public interface GlInterface {
   void stop();
 
   void setFps(int fps);
+
+  void setIsCameraFront(boolean isCameraFront);
 }

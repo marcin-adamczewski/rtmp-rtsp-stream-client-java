@@ -20,6 +20,7 @@ import com.pedro.encoder.input.audio.MicrophoneManager;
 import com.pedro.encoder.input.video.Camera2ApiManager;
 import com.pedro.encoder.input.video.CameraHelper;
 import com.pedro.encoder.input.video.CameraOpenException;
+import com.pedro.encoder.input.video.CameraSwitchCallback;
 import com.pedro.encoder.utils.CodecUtil;
 import com.pedro.encoder.video.FormatVideoEncoder;
 import com.pedro.encoder.video.GetVideoData;
@@ -46,7 +47,7 @@ import java.util.List;
  * Created by pedro on 7/07/17.
  */
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrophoneData {
+public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrophoneData, CameraSwitchCallback {
 
   protected Context context;
   private Camera2ApiManager cameraManager;
@@ -93,7 +94,7 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
   public Camera2Base(Context context, boolean useOpengl) {
     this.context = context;
     if (useOpengl) {
-      glInterface = new OffScreenGlThread(context);
+      glInterface = new OffScreenGlThread(context, true, false);
       glInterface.init();
     }
     isBackground = true;
@@ -101,7 +102,7 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
   }
 
   private void init(Context context) {
-    cameraManager = new Camera2ApiManager(context);
+    cameraManager = new Camera2ApiManager(context, this);
     videoEncoder = new VideoEncoder(this);
     microphoneManager = new MicrophoneManager(this);
     audioEncoder = new AudioEncoder(this);
@@ -716,10 +717,16 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
    *
    * @throws CameraOpenException If the other camera doesn't support same resolution.
    */
+
   public void switchCamera() throws CameraOpenException {
     if (isStreaming() || onPreview) {
       cameraManager.switchCamera();
     }
+  }
+
+  @Override
+  public void cameraSwitchResult(boolean cameraSwitchResult) {
+    if(cameraSwitchResult) glInterface.setIsCameraFront(isFrontCamera());
   }
 
   public GlInterface getGlInterface() {

@@ -134,6 +134,11 @@ public class LightOpenGlView extends OpenGlViewBase {
   }
 
   @Override
+  public void setIsCameraFront(boolean isCameraFront) {
+
+  }
+
+  @Override
   public void setRotation(int rotation) {
     simpleCameraRender.setRotation(rotation);
   }

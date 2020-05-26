@@ -90,8 +90,9 @@ public class SimpleCameraRender {
     GlUtil.checkGlError("drawFrame start");
     surfaceTexture.getTransformMatrix(STMatrix);
 
-    if (mode == 2 || mode == 3) { //stream rotation is enabled
-      SizeCalculator.updateMatrix(rotation, width, height, isPreview, isPortrait, MVPMatrix);
+    if(mode == 2 || mode == 3) {
+      SizeCalculator.updateMatrix(rotation, width, height, isPreview,
+              isPortrait,  false, false, false, MVPMatrix);
     }
     SizeCalculator.calculateViewPort(keepAspectRatio, mode, width, height, streamWidth,
         streamHeight);
