@@ -20,7 +20,6 @@ import com.pedro.encoder.input.audio.MicrophoneManager;
 import com.pedro.encoder.input.video.Camera2ApiManager;
 import com.pedro.encoder.input.video.CameraHelper;
 import com.pedro.encoder.input.video.CameraOpenException;
-import com.pedro.encoder.input.video.CameraSwitchCallback;
 import com.pedro.encoder.utils.CodecUtil;
 import com.pedro.encoder.video.FormatVideoEncoder;
 import com.pedro.encoder.video.GetVideoData;
@@ -47,7 +46,7 @@ import java.util.List;
  * Created by pedro on 7/07/17.
  */
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrophoneData, CameraSwitchCallback {
+public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrophoneData {
 
   protected Context context;
   private Camera2ApiManager cameraManager;
@@ -94,7 +93,7 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
   public Camera2Base(Context context, boolean useOpengl) {
     this.context = context;
     if (useOpengl) {
-      glInterface = new OffScreenGlThread(context, true, false);
+      glInterface = new OffScreenGlThread(context);
       glInterface.init();
     }
     isBackground = true;
@@ -102,7 +101,7 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
   }
 
   private void init(Context context) {
-    cameraManager = new Camera2ApiManager(context, this);
+    cameraManager = new Camera2ApiManager(context);
     videoEncoder = new VideoEncoder(this);
     microphoneManager = new MicrophoneManager(this);
     audioEncoder = new AudioEncoder(this);
@@ -724,9 +723,12 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
     }
   }
 
-  @Override
-  public void cameraSwitchResult(boolean cameraSwitchResult) {
-    if(cameraSwitchResult) glInterface.setIsCameraFront(isFrontCamera());
+  public void setIsStreamFlipVertical(boolean isStreamFlipVertical) {
+    glInterface.setIsFlipStreamVertical(isStreamFlipVertical);
+  }
+
+  public void setIsStreamFlipHorizontal(boolean isStreamFlipHorizontal) {
+    glInterface.setIsFlipStreamHorizontal(isStreamFlipHorizontal);
   }
 
   public GlInterface getGlInterface() {

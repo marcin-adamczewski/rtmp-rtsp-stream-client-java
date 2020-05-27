@@ -19,7 +19,6 @@ import com.pedro.encoder.input.audio.MicrophoneManager;
 import com.pedro.encoder.input.video.Camera1ApiManager;
 import com.pedro.encoder.input.video.CameraHelper;
 import com.pedro.encoder.input.video.CameraOpenException;
-import com.pedro.encoder.input.video.CameraSwitchCallback;
 import com.pedro.encoder.input.video.GetCameraData;
 import com.pedro.encoder.utils.CodecUtil;
 import com.pedro.encoder.video.FormatVideoEncoder;
@@ -49,7 +48,7 @@ import java.util.List;
  */
 
 public abstract class Camera1Base
-    implements GetAacData, GetCameraData, GetVideoData, GetMicrophoneData, CameraSwitchCallback {
+    implements GetAacData, GetCameraData, GetVideoData, GetMicrophoneData {
 
   private static final String TAG = "Camera1Base";
 
@@ -68,13 +67,13 @@ public abstract class Camera1Base
 
   public Camera1Base(SurfaceView surfaceView) {
     context = surfaceView.getContext();
-    cameraManager = new Camera1ApiManager(surfaceView, this, this);
+    cameraManager = new Camera1ApiManager(surfaceView, this);
     init();
   }
 
   public Camera1Base(TextureView textureView) {
     context = textureView.getContext();
-    cameraManager = new Camera1ApiManager(textureView, this, this);
+    cameraManager = new Camera1ApiManager(textureView, this);
     init();
   }
 
@@ -83,7 +82,7 @@ public abstract class Camera1Base
     context = openGlView.getContext();
     this.glInterface = openGlView;
     this.glInterface.init();
-    cameraManager = new Camera1ApiManager(glInterface.getSurfaceTexture(), context, this);
+    cameraManager = new Camera1ApiManager(glInterface.getSurfaceTexture(), context);
     init();
   }
 
@@ -92,7 +91,7 @@ public abstract class Camera1Base
     context = lightOpenGlView.getContext();
     this.glInterface = lightOpenGlView;
     this.glInterface.init();
-    cameraManager = new Camera1ApiManager(glInterface.getSurfaceTexture(), context, this);
+    cameraManager = new Camera1ApiManager(glInterface.getSurfaceTexture(), context);
     init();
   }
 
@@ -101,7 +100,7 @@ public abstract class Camera1Base
     this.context = context;
     glInterface = new OffScreenGlThread(context);
     glInterface.init();
-    cameraManager = new Camera1ApiManager(glInterface.getSurfaceTexture(), context, this);
+    cameraManager = new Camera1ApiManager(glInterface.getSurfaceTexture(), context);
     init();
   }
 
@@ -691,9 +690,12 @@ public abstract class Camera1Base
     }
   }
 
-  @Override
-  public void cameraSwitchResult(boolean cameraSwitchResult) {
-    if(cameraSwitchResult) glInterface.setIsCameraFront(isFrontCamera());
+  public void setIsStreamFlipVertical(boolean isStreamFlipVertical) {
+    glInterface.setIsFlipStreamVertical(isStreamFlipVertical);
+  }
+
+  public void setIsStreamFlipHorizontal(boolean isStreamFlipHorizontal) {
+    glInterface.setIsFlipStreamHorizontal(isStreamFlipHorizontal);
   }
 
   public GlInterface getGlInterface() {

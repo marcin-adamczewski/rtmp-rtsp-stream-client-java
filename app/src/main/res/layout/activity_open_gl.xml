@@ -13,7 +13,6 @@
       app:aspectRatioMode="adjust"
       app:AAEnabled="false"
       app:numFilters="1"
-      app:isStreamFlipHorizontal="true"
       />
 
   <EditText

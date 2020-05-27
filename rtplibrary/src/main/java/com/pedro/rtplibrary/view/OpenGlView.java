@@ -8,7 +8,9 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
+
 import androidx.annotation.RequiresApi;
+
 import com.pedro.encoder.input.gl.SurfaceManager;
 import com.pedro.encoder.input.gl.render.ManagerRender;
 import com.pedro.encoder.input.gl.render.filters.BaseFilterRender;
@@ -28,7 +30,6 @@ public class OpenGlView extends OpenGlViewBase {
   private boolean AAEnabled = false;
   private boolean keepAspectRatio = false;
   private int aspectRatioMode = 0;
-  private boolean isCameraFront = false;
   private boolean isFlipHorizontal = false, isFlipVertical = false;
   private boolean isStreamFlipHorizontal = false, isStreamFlipVertical = false;
 
@@ -117,8 +118,13 @@ public class OpenGlView extends OpenGlViewBase {
   }
 
   @Override
-  public void setIsCameraFront(boolean isCameraFront) {
-    this.isCameraFront = isCameraFront;
+  public void setIsFlipStreamHorizontal(boolean isStreamFlipHorizontal) {
+    this.isStreamFlipHorizontal = isStreamFlipHorizontal;
+  }
+
+  @Override
+  public void setIsFlipStreamVertical(boolean isStreamFlipVertical) {
+    this.isStreamFlipVertical = isStreamFlipVertical;
   }
 
   @Override
@@ -137,7 +143,7 @@ public class OpenGlView extends OpenGlViewBase {
           managerRender.updateFrame();
           managerRender.drawOffScreen();
           managerRender.drawScreen(previewWidth, previewHeight, keepAspectRatio, aspectRatioMode,
-                  0, true, isCameraFront, isStreamFlipHorizontal, isStreamFlipVertical);
+                  0, true, isStreamFlipHorizontal, isStreamFlipVertical);
           if (takePhotoCallback != null) {
             takePhotoCallback.onTakePhoto(
                 GlUtil.getBitmap(previewWidth, previewHeight, encoderWidth, encoderHeight));
@@ -149,7 +155,7 @@ public class OpenGlView extends OpenGlViewBase {
             if (surfaceManagerEncoder != null && !fpsLimiter.limitFPS()) {
               surfaceManagerEncoder.makeCurrent();
               managerRender.drawScreen(encoderWidth, encoderHeight, false, aspectRatioMode,
-                  streamRotation, false, isCameraFront, isStreamFlipHorizontal, isStreamFlipVertical);
+                  streamRotation, false, isStreamFlipHorizontal, isStreamFlipVertical);
               surfaceManagerEncoder.swapBuffer();
             }
           }

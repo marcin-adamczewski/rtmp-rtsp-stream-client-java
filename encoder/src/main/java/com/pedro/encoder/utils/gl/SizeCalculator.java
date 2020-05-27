@@ -36,14 +36,14 @@ public class SizeCalculator {
   }
 
   public static void updateMatrix(int rotation, int width, int height, boolean isPreview,
-                                  boolean isPortrait, boolean isCameraFront,
-                                  boolean flipStreamHorizontal, boolean flipStreamVertical, float[] MVPMatrix) {
+                                  boolean isPortrait, boolean flipStreamHorizontal,
+                                  boolean flipStreamVertical, float[] MVPMatrix) {
     Matrix.setIdentityM(MVPMatrix, 0);
     PointF scale = getScale(rotation, width, height, isPortrait, isPreview);
     Matrix.scaleM(MVPMatrix, 0, scale.x, scale.y, 1f);
     if (!isPreview && !isPortrait) rotation += 90;
     Matrix.rotateM(MVPMatrix, 0, rotation, 0f, 0f, -1f);
-    if (!isPreview && isCameraFront) {
+    if (!isPreview) {
       Matrix.scaleM(MVPMatrix, 0, flipStreamHorizontal ? -1 : 1, flipStreamVertical ? -1 : 1, 1f);
     }
   }

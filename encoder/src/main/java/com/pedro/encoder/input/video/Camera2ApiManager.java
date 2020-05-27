@@ -66,7 +66,6 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
   private float zoomLevel = 1.0f;
   private boolean lanternEnable = false;
   private boolean running = false;
-  private CameraSwitchCallback cameraSwitchCallback;
 
   //Face detector
   public interface FaceDetectorCallback {
@@ -77,9 +76,8 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
   private boolean faceDetectionEnabled = false;
   private int faceDetectionMode;
 
-  public Camera2ApiManager(Context context, CameraSwitchCallback cameraSwitchCallback) {
+  public Camera2ApiManager(Context context) {
     cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
-    this.cameraSwitchCallback = cameraSwitchCallback;
   }
 
   public void prepareCamera(SurfaceView surfaceView, Surface surface) {
@@ -389,14 +387,11 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
         running = true;
         isFrontCamera =
             (LENS_FACING_FRONT == cameraCharacteristics.get(CameraCharacteristics.LENS_FACING));
-        cameraSwitchCallback.cameraSwitchResult(true);
       } catch (CameraAccessException | SecurityException e) {
         Log.e(TAG, "Error", e);
-        cameraSwitchCallback.cameraSwitchResult(false);
       }
     } else {
       Log.e(TAG, "Camera2ApiManager need be prepared, Camera2ApiManager not enabled");
-      cameraSwitchCallback.cameraSwitchResult(false);
     }
   }
 

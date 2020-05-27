@@ -134,7 +134,12 @@ public class LightOpenGlView extends OpenGlViewBase {
   }
 
   @Override
-  public void setIsCameraFront(boolean isCameraFront) {
+  public void setIsFlipStreamHorizontal(boolean isStreamFlipHorizontal) {
+
+  }
+
+  @Override
+  public void setIsFlipStreamVertical(boolean isStreamFlipVertical) {
 
   }
 

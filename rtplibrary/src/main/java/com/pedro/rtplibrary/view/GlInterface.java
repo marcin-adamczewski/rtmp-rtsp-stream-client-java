@@ -101,5 +101,7 @@ public interface GlInterface {
 
   void setFps(int fps);
 
-  void setIsCameraFront(boolean isCameraFront);
+  void setIsFlipStreamHorizontal(boolean isStreamFlipHorizontal);
+
+  void setIsFlipStreamVertical(boolean isStreamFlipVertical);
 }

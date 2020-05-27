@@ -11,6 +11,8 @@ import android.view.MotionEvent;
 import android.view.SurfaceView;
 import android.view.TextureView;
 
+import androidx.annotation.Nullable;
+
 import com.pedro.encoder.Frame;
 import java.io.IOException;
 import java.util.Iterator;
@@ -44,7 +46,6 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
   private boolean isPortrait = false;
   private int cameraFacing = Camera.CameraInfo.CAMERA_FACING_BACK;
   private Context context;
-  private CameraSwitchCallback cameraSwitchCallback;
 
   //default parameters for camera
   private int width = 640;
@@ -64,26 +65,23 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
 
   private FaceDetectorCallback faceDetectorCallback;
 
-  public Camera1ApiManager(SurfaceView surfaceView, GetCameraData getCameraData, CameraSwitchCallback cameraSwitchCallback) {
+  public Camera1ApiManager(SurfaceView surfaceView, GetCameraData getCameraData) {
     this.surfaceView = surfaceView;
     this.getCameraData = getCameraData;
     this.context = surfaceView.getContext();
-    this.cameraSwitchCallback = cameraSwitchCallback;
     init();
   }
 
-  public Camera1ApiManager(TextureView textureView, GetCameraData getCameraData, CameraSwitchCallback cameraSwitchCallback) {
+  public Camera1ApiManager(TextureView textureView, GetCameraData getCameraData) {
     this.textureView = textureView;
     this.getCameraData = getCameraData;
     this.context = textureView.getContext();
-    this.cameraSwitchCallback = cameraSwitchCallback;
     init();
   }
 
-  public Camera1ApiManager(SurfaceTexture surfaceTexture, Context context, CameraSwitchCallback cameraSwitchCallback) {
+  public Camera1ApiManager(SurfaceTexture surfaceTexture, Context context) {
     this.surfaceTexture = surfaceTexture;
     this.context = context;
-    this.cameraSwitchCallback = cameraSwitchCallback;
     init();
   }
 
@@ -352,14 +350,12 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
           cameraSelect = i;
           if (!checkCanOpen()) {
             cameraSelect = oldCamera;
-            cameraSwitchCallback.cameraSwitchResult(false);
             throw new CameraOpenException("This camera resolution cant be opened");
           }
           stop();
           cameraFacing = cameraFacing == Camera.CameraInfo.CAMERA_FACING_BACK
               ? Camera.CameraInfo.CAMERA_FACING_FRONT : Camera.CameraInfo.CAMERA_FACING_BACK;
           start();
-          cameraSwitchCallback.cameraSwitchResult(true);
           return;
         }
       }

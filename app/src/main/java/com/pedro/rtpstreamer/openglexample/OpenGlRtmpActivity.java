@@ -407,6 +407,8 @@ public class OpenGlRtmpActivity extends AppCompatActivity
           rtmpCamera1.switchCamera();
         } catch (CameraOpenException e) {
           Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
+        } finally {
+          rtmpCamera1.setIsStreamFlipHorizontal(rtmpCamera1.isFrontCamera());
         }
         break;
       case R.id.b_pause_stream:

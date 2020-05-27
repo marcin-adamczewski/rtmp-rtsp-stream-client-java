@@ -39,11 +39,8 @@ public class OffScreenGlThread
   private int encoderWidth, encoderHeight;
   private boolean loadAA = false;
   private int streamRotation;
-  private int flipStreamMode = 4;
-  private boolean isCameraFront = false;
-  private boolean isFlipStreamHorizontal = false;
-  private boolean isFlipStreamVertical = false;
-
+  private boolean isStreamFlipHorizontal = false;
+  private boolean isStreamFlipVertical = false;
   private boolean AAEnabled = false;
   private FpsLimiter fpsLimiter = new FpsLimiter();
   //used with camera
@@ -51,12 +48,6 @@ public class OffScreenGlThread
 
   public OffScreenGlThread(Context context) {
     this.context = context;
-  }
-
-  public OffScreenGlThread(Context context, boolean isFlipStreamHorizontal, boolean isFlipStreamVertical) {
-    this.context = context;
-    this.isFlipStreamHorizontal = isFlipStreamHorizontal;
-    this.isFlipStreamVertical = isFlipStreamVertical;
   }
 
   @Override
@@ -188,8 +179,8 @@ public class OffScreenGlThread
           surfaceManager.makeCurrent();
           textureManager.updateFrame();
           textureManager.drawOffScreen();
-          textureManager.drawScreen(encoderWidth, encoderHeight, false, flipStreamMode, 0,
-                  isCameraFront, true, isFlipStreamHorizontal, isFlipStreamVertical);
+          textureManager.drawScreen(encoderWidth, encoderHeight, false, 0, 0,
+                  true, isStreamFlipHorizontal, isStreamFlipVertical);
           if (takePhotoCallback != null) {
             takePhotoCallback.onTakePhoto(
                 GlUtil.getBitmap(encoderWidth, encoderHeight, encoderWidth, encoderHeight));
@@ -200,8 +191,8 @@ public class OffScreenGlThread
           synchronized (sync) {
             if (surfaceManagerEncoder != null && !fpsLimiter.limitFPS()) {
               surfaceManagerEncoder.makeCurrent();
-              textureManager.drawScreen(encoderWidth, encoderHeight, false, flipStreamMode, streamRotation,
-                  isCameraFront,false, isFlipStreamHorizontal, isFlipStreamVertical);
+              textureManager.drawScreen(encoderWidth, encoderHeight, false, 0, streamRotation,
+                  false, isStreamFlipHorizontal, isStreamFlipVertical);
               surfaceManagerEncoder.swapBuffer();
             }
           }
@@ -223,15 +214,20 @@ public class OffScreenGlThread
   }
 
   @Override
-  public void setIsCameraFront(boolean isCameraFront) {
-    this.isCameraFront = isCameraFront;
-  }
-
-  @Override
   public void onFrameAvailable(SurfaceTexture surfaceTexture) {
     synchronized (sync) {
       frameAvailable = true;
       sync.notifyAll();
     }
+  }
+
+  @Override
+  public void setIsFlipStreamHorizontal(boolean isStreamFlipHorizontal) {
+    this.isStreamFlipHorizontal = isStreamFlipHorizontal;
+  }
+
+  @Override
+  public void setIsFlipStreamVertical(boolean isStreamFlipVertical) {
+    this.isStreamFlipVertical = isStreamFlipVertical;
   }
 }

@@ -92,7 +92,7 @@ public class SimpleCameraRender {
 
     if(mode == 2 || mode == 3) {
       SizeCalculator.updateMatrix(rotation, width, height, isPreview,
-              isPortrait,  false, false, false, MVPMatrix);
+              isPortrait, false, false, MVPMatrix);
     }
     SizeCalculator.calculateViewPort(keepAspectRatio, mode, width, height, streamWidth,
         streamHeight);
