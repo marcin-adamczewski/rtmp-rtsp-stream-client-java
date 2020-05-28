@@ -79,7 +79,6 @@ public class ScreenRender {
 
   public void draw(int width, int height, boolean keepAspectRatio, int mode, int rotation,
       boolean isPreview, boolean flipStreamHorizontal, boolean flipStreamVertical) {
-    System.out.println("flipStreamHorizontal " + flipStreamHorizontal + " flipStreamVertical " + flipStreamVertical);
     GlUtil.checkGlError("drawScreen start");
 
     SizeCalculator.updateMatrix(rotation, width, height, isPreview,
