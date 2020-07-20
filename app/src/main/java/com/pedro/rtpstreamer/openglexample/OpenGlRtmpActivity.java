@@ -17,8 +17,10 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.pedro.encoder.input.gl.SpriteGestureController;
 import com.pedro.encoder.input.gl.render.filters.AnalogTVFilterRender;
 import com.pedro.encoder.input.gl.render.filters.AndroidViewFilterRender;
@@ -62,17 +64,18 @@ import com.pedro.encoder.input.gl.render.filters.object.GifObjectFilterRender;
 import com.pedro.encoder.input.gl.render.filters.object.ImageObjectFilterRender;
 import com.pedro.encoder.input.gl.render.filters.object.SurfaceFilterRender;
 import com.pedro.encoder.input.gl.render.filters.object.TextObjectFilterRender;
+import com.pedro.encoder.input.video.CameraHelper;
 import com.pedro.encoder.input.video.CameraOpenException;
 import com.pedro.encoder.utils.gl.TranslateTo;
-import com.pedro.rtplibrary.rtmp.RtmpCamera1;
+import com.pedro.rtplibrary.rtmp.RtmpCamera2;
 import com.pedro.rtplibrary.view.OpenGlView;
 import com.pedro.rtpstreamer.R;
+import net.ossrs.rtmp.ConnectCheckerRtmp;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-import net.ossrs.rtmp.ConnectCheckerRtmp;
 
 /**
  * More documentation see:
@@ -84,7 +87,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
     implements ConnectCheckerRtmp, View.OnClickListener, SurfaceHolder.Callback,
     View.OnTouchListener {
 
-  private RtmpCamera1 rtmpCamera1;
+  private RtmpCamera2 rtmpCamera1;
   private Button button;
   private Button bRecord;
   private EditText etUrl;
@@ -109,9 +112,11 @@ public class OpenGlRtmpActivity extends AppCompatActivity
     switchCamera.setOnClickListener(this);
     etUrl = findViewById(R.id.et_rtp_url);
     etUrl.setHint(R.string.hint_rtmp);
-    rtmpCamera1 = new RtmpCamera1(openGlView, this);
+    rtmpCamera1 = new RtmpCamera2(openGlView, this);
     openGlView.getHolder().addCallback(this);
     openGlView.setOnTouchListener(this);
+
+    new BitrateAdapter2(rtmpCamera1, 5 * 1024 * 1024, (int) (0.1 * 1024.0 * 1024.0));
   }
 
   @Override
@@ -388,9 +393,11 @@ public class OpenGlRtmpActivity extends AppCompatActivity
       case R.id.b_start_stop:
         if (!rtmpCamera1.isStreaming()) {
           if (rtmpCamera1.isRecording()
-              || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo()) {
+              || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo(640, 480, 30, 300 * 1024, false, CameraHelper.getCameraOrientation(this))) {
             button.setText(R.string.stop_button);
-            rtmpCamera1.startStream(etUrl.getText().toString());
+            //rtmpCamera1.startStream(etUrl.getText().toString());
+            rtmpCamera1.startStream("rtmp://rtmp-global.cloud.vimeo.com/live/ee0f27b0-9175-46ab-af11-4818eaa49efc");
+            //rtmpCamera1.startStream("rtmp://10.10.1.146/live/SyBooCh0U");
           } else {
             Toast.makeText(this, "Error preparing stream, This device cant do it",
                 Toast.LENGTH_SHORT).show();

@@ -52,6 +52,10 @@ public class RtmpCamera2 extends Camera2Base {
     srsFlvMuxer = new SrsFlvMuxer(connectChecker);
   }
 
+  public void setTransferDiffListener(SrsFlvMuxer.TransferDiffListener listener) {
+    srsFlvMuxer.transferDiffListener = listener;
+  }
+
   /**
    * H264 profile.
    *

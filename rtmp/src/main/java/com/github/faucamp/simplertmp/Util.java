@@ -127,8 +127,7 @@ public class Util {
     long bits =
         ((long) (in.read() & 0xff) << 56)
             | ((long) (in.read() & 0xff) << 48)
-            | ((long) (in.read()
-            & 0xff) << 40)
+            | ((long) (in.read() & 0xff) << 40)
             | ((long) (in.read() & 0xff) << 32)
             | ((in.read() & 0xff) << 24)
             | ((in.read() & 0xff) << 16)

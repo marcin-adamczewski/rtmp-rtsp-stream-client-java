@@ -58,8 +58,8 @@ public class RtmpConnection implements RtmpPublisher {
   private Socket socket;
   private RtmpSessionInfo rtmpSessionInfo;
   private RtmpDecoder rtmpDecoder;
-  private BufferedInputStream inputStream;
-  private BufferedOutputStream outputStream;
+  private InputStream inputStream;
+  private OutputStream outputStream;
   private Thread rxPacketHandler;
   private volatile boolean connected = false;
   private volatile boolean publishPermitted = false;
@@ -134,6 +134,9 @@ public class RtmpConnection implements RtmpPublisher {
       if (!tlsEnabled) {
         socket = new Socket();
         SocketAddress socketAddress = new InetSocketAddress(host, port);
+        socket.setSendBufferSize(8192);
+        socket.setReceiveBufferSize(8192);
+        socket.setTcpNoDelay(true);
         socket.connect(socketAddress, 5000);
       } else {
         socket = CreateSSLSocket.createSSlSocket(host, port);
@@ -446,6 +449,12 @@ public class RtmpConnection implements RtmpPublisher {
         || !publishPermitted) {
       return;
     }
+    try {
+      Log.d("lol15", "socket buffer receiver: " + socket.getReceiveBufferSize());
+      Log.d("lol15", "socket buffer send: " + socket.getSendBufferSize());
+    } catch (SocketException e) {
+      e.printStackTrace();
+    }
     Video video = new Video();
     video.setData(data, size);
     video.getHeader().setAbsoluteTimestamp(dts);
@@ -519,7 +528,7 @@ public class RtmpConnection implements RtmpPublisher {
               rtmpSessionInfo.setAcknowledgmentWindowSize(size);
               break;
             case SET_PEER_BANDWIDTH:
-              rtmpSessionInfo.setAcknowledgmentWindowSize(socket.getSendBufferSize());
+              //rtmpSessionInfo.setAcknowledgmentWindowSize(socket.getSendBufferSize());
               int acknowledgementWindowsize = rtmpSessionInfo.getAcknowledgementWindowSize();
               ChunkStreamInfo chunkStreamInfo =
                   rtmpSessionInfo.getChunkStreamInfo(ChunkStreamInfo.RTMP_CID_PROTOCOL_CONTROL);
@@ -527,7 +536,8 @@ public class RtmpConnection implements RtmpPublisher {
                   + acknowledgementWindowsize);
               sendRtmpPacket(new WindowAckSize(acknowledgementWindowsize, chunkStreamInfo));
               // Set socket option. This line could produce bps calculation problems.
-              socket.setSendBufferSize(acknowledgementWindowsize);
+              //socket.setSendBufferSize(acknowledgementWindowsize);
+              Log.d("lol", "setting send buffer size to: " + acknowledgementWindowsize);
               break;
             case COMMAND_AMF0:
               handleRxInvoke((Command) rtmpPacket);
@@ -576,13 +586,17 @@ public class RtmpConnection implements RtmpPublisher {
             rtmpSessionInfo = new RtmpSessionInfo();
             rtmpDecoder = new RtmpDecoder(rtmpSessionInfo);
             if (!tlsEnabled) {
+              Log.d("lol", "creating sosckey");
               socket = new Socket(host, port);
             } else {
               socket = CreateSSLSocket.createSSlSocket(host, port);
               if (socket == null) throw new IOException("Socket creation failed");
+              Log.d("lol", "creating sosckey 2");
             }
+
             inputStream = new BufferedInputStream(socket.getInputStream());
             outputStream = new BufferedOutputStream(socket.getOutputStream());
+
             Log.d(TAG, "connect(): socket connection established, doing handshake...");
             salt = Util.getSalt(description);
             challenge = Util.getChallenge(description);
