@@ -44,6 +44,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import kotlin.Unit;
+
 /**
  * More documentation see:
  * {@link com.pedro.rtplibrary.base.Camera1Base}
@@ -95,6 +97,7 @@ public class RtmpActivity extends AppCompatActivity
     bRecord.setOnClickListener(this);
     Button switchCamera = findViewById(R.id.switch_camera);
     switchCamera.setOnClickListener(this);
+    rtmpCamera1.setReTries(5);
   }
 
   private void prepareOptionsMenuViews() {
@@ -219,7 +222,8 @@ public class RtmpActivity extends AppCompatActivity
             rtmpCamera1.setAuthorization(user, password);
           }
           if (rtmpCamera1.isRecording() || prepareEncoders()) {
-            rtmpCamera1.startStream(etUrl.getText().toString());
+            //rtmpCamera1.startStream(etUrl.getText().toString());
+            rtmpCamera1.startStream("rtmp://rtmp-global.cloud.vimeo.com/live/7f7e034a-753b-4459-abc3-cef67cc07ca0");
           } else {
             //If you see this all time when you start stream,
             //it is because your encoder device dont support the configuration
@@ -322,16 +326,23 @@ public class RtmpActivity extends AppCompatActivity
       public void run() {
         Toast.makeText(RtmpActivity.this, "Connection failed. " + reason, Toast.LENGTH_SHORT)
             .show();
-        rtmpCamera1.stopStream();
-        bStartStop.setText(getResources().getString(R.string.start_button));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
-            && rtmpCamera1.isRecording()) {
-          rtmpCamera1.stopRecord();
-          bRecord.setText(R.string.start_record);
-          Toast.makeText(RtmpActivity.this,
-              "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
-              Toast.LENGTH_SHORT).show();
-          currentDateAndTime = "";
+
+        if (!rtmpCamera1.reTry(2000, reason)) {
+          Log.d("lol", "failed retrying");
+          rtmpCamera1.stopStream();
+          bStartStop.setText(getResources().getString(R.string.start_button));
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
+                  && rtmpCamera1.isRecording()) {
+            rtmpCamera1.stopRecord();
+            bRecord.setText(R.string.start_record);
+            Toast.makeText(RtmpActivity.this,
+                    "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
+                    Toast.LENGTH_SHORT).show();
+            currentDateAndTime = "";
+            rtmpCamera1.setReTries(5);
+          }
+        } else {
+          Log.d("lol", "retrying");
         }
       }
     });
@@ -362,6 +373,7 @@ public class RtmpActivity extends AppCompatActivity
               Toast.LENGTH_SHORT).show();
           currentDateAndTime = "";
         }
+        rtmpCamera1.setReTries(5);
       }
     });
   }

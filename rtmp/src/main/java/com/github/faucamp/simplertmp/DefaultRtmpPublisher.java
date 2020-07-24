@@ -1,6 +1,8 @@
 package com.github.faucamp.simplertmp;
 
 import com.github.faucamp.simplertmp.io.RtmpConnection;
+import com.github.faucamp.simplertmp.packets.Video;
+
 import net.ossrs.rtmp.ConnectCheckerRtmp;
 
 /**
@@ -39,6 +41,11 @@ public class DefaultRtmpPublisher implements RtmpPublisher {
   @Override
   public void publishAudioData(byte[] data, int size, int dts) {
     rtmpConnection.publishAudioData(data, size, dts);
+  }
+
+  @Override
+  public void publishFakeData(byte[] data) {
+    rtmpConnection.publishFakeData(data);
   }
 
   @Override

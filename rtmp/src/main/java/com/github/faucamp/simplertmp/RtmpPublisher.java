@@ -50,6 +50,8 @@ public interface RtmpPublisher {
    */
   void publishAudioData(byte[] data, int size, int dts);
 
+  void publishFakeData(byte[] data);
+
   /**
    * set video resolution
    *

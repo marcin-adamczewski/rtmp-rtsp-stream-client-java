@@ -1,6 +1,7 @@
 package net.ossrs.rtmp;
 
 import android.media.MediaCodec;
+import android.net.TrafficStats;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
@@ -12,7 +13,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by winlin on 5/2/15.
@@ -54,7 +54,7 @@ public class SrsFlvMuxer {
 
   private static final String TAG = "SrsFlvMuxer";
 
-  private static final int VIDEO_ALLOC_SIZE = 128 * 1024;
+  public static final int VIDEO_ALLOC_SIZE = 128 * 1024;
   private static final int AUDIO_ALLOC_SIZE = 4 * 1024;
   private volatile boolean connected = false;
   private RtmpPublisher publisher;
@@ -82,6 +82,17 @@ public class SrsFlvMuxer {
   private long mDroppedAudioFrames = 0;
   private long mDroppedVideoFrames = 0;
   private long startTs = 0;
+
+  private volatile int totalIncomingBytes;
+  private int totalSentBytes;
+  private long lastBitrateCheckNs = -1L;
+
+  byte [] data = new byte[(int) (100 * 1024 / 8f)];
+
+  public interface TransferDiffListener {
+    void onDiffCalculated(double diffBytes, double diffBytesSystem, double bufferTaken);
+  }
+  public TransferDiffListener transferDiffListener;
 
   /**
    * constructor.
@@ -126,20 +137,20 @@ public class SrsFlvMuxer {
   }
 
   public void resizeFlvTagCache(int newSize) {
-    synchronized (mFlvAudioTagCache) {
+/*    synchronized (mFlvAudioTagCache) {
       mFlvAudioTagCache = resizeFlvTagCacheInternal(mFlvAudioTagCache, newSize);
     }
     synchronized (mFlvVideoTagCache) {
       mFlvVideoTagCache = resizeFlvTagCacheInternal(mFlvVideoTagCache, newSize);
-    }
+    }*/
   }
 
-  private BlockingQueue<SrsFlvFrame> resizeFlvTagCacheInternal(BlockingQueue<SrsFlvFrame> cache, int newSize) {
+  private LinkedBlockingQueue<SrsFlvFrame> resizeFlvTagCacheInternal(LinkedBlockingQueue<SrsFlvFrame> cache, int newSize) {
     if(newSize < cache.size() - cache.remainingCapacity()) {
       throw new RuntimeException("Can't fit current cache inside new cache size");
     }
 
-    BlockingQueue<SrsFlvFrame> newQueue = new LinkedBlockingQueue<>(newSize);
+    LinkedBlockingQueue<SrsFlvFrame> newQueue = new LinkedBlockingQueue<>(newSize);
     cache.drainTo(newQueue);
     return newQueue;
   }
@@ -203,6 +214,9 @@ public class SrsFlvMuxer {
       connectChecker.onDisconnectRtmp();
     }
 
+    Log.d("lol2", "dropped video frames: " + getDroppedVideoFrames());
+    Log.d("lol2", "dropped audio frames: " + getDroppedAudioFrames());
+
     resetSentAudioFrames();
     resetSentVideoFrames();
     resetDroppedAudioFrames();
@@ -244,11 +258,16 @@ public class SrsFlvMuxer {
     return connected;
   }
 
+  private int framesCount = 0;
+
+  long initSentBytesSystem = 0;
+
   private void sendFlvTag(SrsFlvFrame frame) {
     if (!connected || frame == null) {
       return;
     }
 
+    int frameSize = frame.flvTag.size();
     int dts = akamaiTs ? (int)((System.nanoTime() / 1000 - startTs) / 1000) : frame.dts;
     if (frame.is_video()) {
       if (frame.is_keyframe()) {
@@ -257,19 +276,53 @@ public class SrsFlvMuxer {
                 frame.flvTag.array().length));
       }
       publisher.publishVideoData(frame.flvTag.array(), frame.flvTag.size(), dts);
+      totalSentBytes += frameSize;
       mVideoAllocator.release(frame.flvTag);
       mVideoFramesSent++;
+      framesCount++;
     } else if (frame.is_audio()) {
       publisher.publishAudioData(frame.flvTag.array(), frame.flvTag.size(), dts);
       mAudioAllocator.release(frame.flvTag);
       mAudioFramesSent++;
     }
+
+    if (lastBitrateCheckNs == -1) {
+      lastBitrateCheckNs = System.nanoTime();
+      initSentBytesSystem = TrafficStats.getTotalTxBytes();
+    }
+    double timeDiff = (System.nanoTime() - lastBitrateCheckNs) / 1000.0 / 1000.0 / 1000.0;
+    if (timeDiff > 5) {
+      long sentBytesSystem = TrafficStats.getTotalTxBytes() - initSentBytesSystem;
+      int totalIncomingBytes = this.totalIncomingBytes;
+      int totalSentBytes = this.totalSentBytes;
+      Log.d("lol8", "Total incoming Mb: " + bytesToMb(totalIncomingBytes) / timeDiff);
+      Log.d("lol8", "Total sent bytes Mb: " + bytesToMb(totalSentBytes) / timeDiff);
+      Log.d("lol8", "Total sent bytes system Mb: " + bytesToMb((int) sentBytesSystem) / timeDiff);
+      Log.d("lol7", "Frames counts per second: " + framesCount / timeDiff);
+      int bytesDiff = totalIncomingBytes - totalSentBytes;
+      int bytesDiffSystem = totalIncomingBytes - (int) sentBytesSystem;
+      if (transferDiffListener != null) {
+        transferDiffListener.onDiffCalculated(
+                bytesDiff / timeDiff,
+                bytesDiffSystem / timeDiff,
+                mFlvVideoTagCache.size());
+      }
+      lastBitrateCheckNs = -1;
+      this.totalSentBytes = 0;
+      this.totalIncomingBytes = 0;
+      framesCount = 0;
+    }
+  }
+
+  private double bytesToMb(int bytes) {
+    return bytes / 1024f / 1024f * 8f;
   }
 
   /**
    * start to the remote SRS for remux.
    */
   public void start(final String rtmpUrl) {
+    lastBitrateCheckNs = -1;
     startTs = System.nanoTime() / 1000;
     worker = new Thread(new Runnable() {
       @Override
@@ -280,18 +333,19 @@ public class SrsFlvMuxer {
         }
         reTries = numRetry;
         connectCheckerRtmp.onConnectionSuccessRtmp();
+
         while (!Thread.interrupted()) {
           try {
-            SrsFlvFrame frame = mFlvAudioTagCache.poll(1, TimeUnit.MILLISECONDS);
+            SrsFlvFrame frame = mFlvAudioTagCache.poll();
             if (frame != null) {
               sendFlvTag(frame);
             }
 
-            frame = mFlvVideoTagCache.poll(1, TimeUnit.MILLISECONDS);
+            frame = mFlvVideoTagCache.poll();
             if (frame != null) {
               sendFlvTag(frame);
             }
-          } catch (InterruptedException e) {
+          } catch (Exception e) {
             Thread.currentThread().interrupt();
           }
         }
@@ -349,7 +403,7 @@ public class SrsFlvMuxer {
   //     3 = disposable inter frame (H.263 only)
   //     4 = generated key frame (reserved for server use only)
   //     5 = video info/command frame
-  private class SrsCodecVideoAVCFrame {
+  class SrsCodecVideoAVCFrame {
     public final static int KeyFrame = 1;
     public final static int InterFrame = 2;
   }
@@ -360,7 +414,7 @@ public class SrsFlvMuxer {
   //     1 = AVC NALU
   //     2 = AVC end of sequence (lower level NALU sequence ender is
   //         not required or supported)
-  private class SrsCodecVideoAVCType {
+  class SrsCodecVideoAVCType {
     public final static int SequenceHeader = 0;
     public final static int NALU = 1;
   }
@@ -368,14 +422,14 @@ public class SrsFlvMuxer {
   /**
    * E.4.1 FLV Tag, page 75
    */
-  private class SrsCodecFlvTag {
+  class SrsCodecFlvTag {
     // 8 = audio
     public final static int Audio = 8;
     // 9 = video
     public final static int Video = 9;
   }
 
-  private class AudioSampleRate {
+  class AudioSampleRate {
     public final static int R11025 = 11025;
     public final static int R12000 = 12000;
     public final static int R16000 = 16000;
@@ -471,37 +525,7 @@ public class SrsFlvMuxer {
     public int size;
   }
 
-  /**
-   * the muxed flv frame.
-   */
-  private class SrsFlvFrame {
-    // the tag bytes.
-    public SrsAllocator.Allocation flvTag;
-    // the codec type for audio/aac and video/avc for instance.
-    public int avc_aac_type;
-    // the frame type, keyframe or not.
-    public int frame_type;
-    // the tag type, audio, video or data.
-    public int type;
-    // the dts in ms, tbn is 1000.
-    public int dts;
 
-    public boolean is_keyframe() {
-      return is_video() && frame_type == SrsCodecVideoAVCFrame.KeyFrame;
-    }
-
-    public boolean is_sequenceHeader() {
-      return avc_aac_type == 0;
-    }
-
-    public boolean is_video() {
-      return type == SrsCodecFlvTag.Video;
-    }
-
-    public boolean is_audio() {
-      return type == SrsCodecFlvTag.Audio;
-    }
-  }
 
   /**
    * the raw h.264 stream, in annexb.
@@ -1029,6 +1053,7 @@ public class SrsFlvMuxer {
       try {
         if(frame.is_video()) {
           mFlvVideoTagCache.add(frame);
+          totalIncomingBytes += frame.flvTag.size();
         } else {
           mFlvAudioTagCache.add(frame);
         }

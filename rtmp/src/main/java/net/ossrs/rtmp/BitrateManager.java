@@ -1,5 +1,7 @@
 package net.ossrs.rtmp;
 
+import android.util.Log;
+
 /**
  * Created by pedro on 10/07/19.
  *
@@ -19,6 +21,7 @@ public class BitrateManager {
     bitrate += size;
     long timeDiff = System.currentTimeMillis() - timeStamp;
     if (timeDiff >= 1000) {
+      Log.d("lol5", "Total Mb sent: " + bitrate / 1024f / 1024f);
       connectCheckerRtmp.onNewBitrateRtmp((int) (bitrate / (timeDiff / 1000f)));
       timeStamp = System.currentTimeMillis();
       bitrate = 0;
