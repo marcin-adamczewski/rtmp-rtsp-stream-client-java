@@ -1041,27 +1041,5 @@ public class SrsFlvMuxerObs {
                 }
             }
         }
-
-        // OBS
-        private void addVideoPacket() {
-            check_to_drop_frames(false);
-            check_to_drop_frames(true);
-
-            /* if currently dropping frames, drop packets until it reaches the
-             * desired priority */
-            if (packet->drop_priority < stream->min_priority) {
-                stream->dropped_frames++;
-                return false;
-            } else {
-                stream->min_priority = 0;
-            }
-
-            stream->last_dts_usec = packet->dts_usec;
-            return add_packet(stream, packet);
-        }
-
-        private void check_to_drop_frames(boolean pFrame) {
-
-        }
     }
 }

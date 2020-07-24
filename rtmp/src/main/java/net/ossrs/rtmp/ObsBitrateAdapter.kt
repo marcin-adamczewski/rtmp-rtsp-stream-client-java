@@ -39,7 +39,7 @@ class ObsBitrateAdapter(
             return
         }
 
-        val buffer_duration_usec = lastDtsMs - first.dts_usec
+        //val buffer_duration_usec = lastDtsMs - first.dts_usec
     }
 
     private fun increaseBitrateIfNeeded() {
