@@ -4,6 +4,8 @@ import android.content.Context;
 import android.media.MediaCodec;
 import android.os.Build;
 import androidx.annotation.RequiresApi;
+
+import android.util.Log;
 import android.view.SurfaceView;
 import android.view.TextureView;
 
@@ -11,8 +13,10 @@ import com.pedro.rtplibrary.base.Camera2Base;
 
 import com.pedro.rtplibrary.view.LightOpenGlView;
 import com.pedro.rtplibrary.view.OpenGlView;
+
 import net.ossrs.rtmp.ConnectCheckerRtmp;
 import net.ossrs.rtmp.SrsFlvMuxer;
+import net.ossrs.rtmp.SrsFlvMuxerObs;
 
 import java.nio.ByteBuffer;
 
@@ -25,35 +29,42 @@ import java.nio.ByteBuffer;
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class RtmpCamera2 extends Camera2Base {
 
-  private SrsFlvMuxer srsFlvMuxer;
+  private SrsFlvMuxerObs srsFlvMuxer;
 
   public RtmpCamera2(SurfaceView surfaceView, ConnectCheckerRtmp connectChecker) {
     super(surfaceView);
-    srsFlvMuxer = new SrsFlvMuxer(connectChecker);
+    srsFlvMuxer = new SrsFlvMuxerObs(connectChecker);
   }
 
   public RtmpCamera2(TextureView textureView, ConnectCheckerRtmp connectChecker) {
     super(textureView);
-    srsFlvMuxer = new SrsFlvMuxer(connectChecker);
+    srsFlvMuxer = new SrsFlvMuxerObs(connectChecker);
   }
 
   public RtmpCamera2(OpenGlView openGlView, ConnectCheckerRtmp connectChecker) {
     super(openGlView);
-    srsFlvMuxer = new SrsFlvMuxer(connectChecker);
+    srsFlvMuxer = new SrsFlvMuxerObs(connectChecker);
+    srsFlvMuxer.bitrateUpdater = new SrsFlvMuxerObs.BitrateUpdater() {
+      @Override
+      public void onNewBitrate(long bitrate) {
+        Log.d("lol55", "new bitrate on fly: " + bitrate);
+        setVideoBitrateOnFly((int) bitrate);
+      }
+    };
   }
 
   public RtmpCamera2(LightOpenGlView lightOpenGlView, ConnectCheckerRtmp connectChecker) {
     super(lightOpenGlView);
-    srsFlvMuxer = new SrsFlvMuxer(connectChecker);
+    srsFlvMuxer = new SrsFlvMuxerObs(connectChecker);
   }
 
   public RtmpCamera2(Context context, boolean useOpengl, ConnectCheckerRtmp connectChecker) {
     super(context, useOpengl);
-    srsFlvMuxer = new SrsFlvMuxer(connectChecker);
+    srsFlvMuxer = new SrsFlvMuxerObs(connectChecker);
   }
 
   public void setTransferDiffListener(SrsFlvMuxer.TransferDiffListener listener) {
-    srsFlvMuxer.transferDiffListener = listener;
+    //srsFlvMuxer.transferDiffListener = listener;
   }
 
   /**

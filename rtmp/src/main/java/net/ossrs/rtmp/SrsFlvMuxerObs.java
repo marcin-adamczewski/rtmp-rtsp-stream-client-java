@@ -1,6 +1,8 @@
 package net.ossrs.rtmp;
 
+import android.media.AudioRecord;
 import android.media.MediaCodec;
+import android.media.MicrophoneDirection;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -9,10 +11,13 @@ import com.github.faucamp.simplertmp.DefaultRtmpPublisher;
 import com.github.faucamp.simplertmp.RtmpPublisher;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+
 import android.os.Process;
 
 /**
@@ -22,31 +27,31 @@ import android.os.Process;
  * to POST the h.264/avc annexb frame over RTMP.
  * modified by Troy
  * to accept any RtmpPublisher implementation.
- *
+ * <p>
  * Usage:
  * muxer = new SrsRtmp("rtmp://ossrs.net/live/yasea");
  * muxer.start();
- *
+ * <p>
  * MediaFormat aformat = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, sampleRate,
  * achannel);
  * // setup the aformat for audio.
  * atrack = muxer.addTrack(aformat);
- *
+ * <p>
  * MediaFormat vformat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, vsize.width,
  * vsize.height);
  * // setup the vformat for video.
  * vtrack = muxer.addTrack(vformat);
- *
+ * <p>
  * // encode the video frame from camera by h.264 codec to es and bi,
  * // where es is the h.264 ES(element stream).
  * ByteBuffer es, MediaCodec.BufferInfo bi;
  * muxer.writeSampleData(vtrack, es, bi);
- *
+ * <p>
  * // encode the audio frame from microphone by aac codec to es and bi,
  * // where es is the aac ES(element stream).
  * ByteBuffer es, MediaCodec.BufferInfo bi;
  * muxer.writeSampleData(atrack, es, bi);
- *
+ * <p>
  * muxer.stop();
  * muxer.release();
  */
@@ -64,8 +69,8 @@ public class SrsFlvMuxerObs {
     private boolean needToFindKeyFrame = true;
     private SrsAllocator mVideoAllocator = new SrsAllocator(VIDEO_ALLOC_SIZE);
     private SrsAllocator mAudioAllocator = new SrsAllocator(AUDIO_ALLOC_SIZE);
-    private volatile BlockingQueue<SrsFlvFrame> mFlvVideoTagCache = new LinkedBlockingQueue<>(30);
-    private volatile BlockingQueue<SrsFlvFrame> mFlvAudioTagCache = new LinkedBlockingQueue<>(30);
+    private volatile LinkedBlockingQueue<SrsFlvFrame> mFlvVideoTagCache = new LinkedBlockingQueue<>(30);
+    private volatile LinkedBlockingQueue<SrsFlvFrame> mFlvAudioTagCache = new LinkedBlockingQueue<>(30);
     private ConnectCheckerRtmp connectCheckerRtmp;
     private int sampleRate = 0;
     private boolean isPpsSpsSend = false;
@@ -135,13 +140,13 @@ public class SrsFlvMuxerObs {
         }
     }
 
-    private BlockingQueue<SrsFlvFrame> resizeFlvTagCacheInternal(BlockingQueue<SrsFlvFrame> cache,
+    private LinkedBlockingQueue<SrsFlvFrame> resizeFlvTagCacheInternal(LinkedBlockingQueue<SrsFlvFrame> cache,
                                                                  int newSize) {
         if (newSize < cache.size() - cache.remainingCapacity()) {
             throw new RuntimeException("Can't fit current cache inside new cache size");
         }
 
-        BlockingQueue<SrsFlvFrame> newQueue = new LinkedBlockingQueue<>(newSize);
+        LinkedBlockingQueue<SrsFlvFrame> newQueue = new LinkedBlockingQueue<>(newSize);
         cache.drainTo(newQueue);
         return newQueue;
     }
@@ -185,7 +190,7 @@ public class SrsFlvMuxerObs {
     /**
      * set video resolution for publisher
      *
-     * @param width width
+     * @param width  width
      * @param height height
      */
     public void setVideoResolution(int width, int height) {
@@ -251,6 +256,11 @@ public class SrsFlvMuxerObs {
             return;
         }
 
+        DBRFrame dbrFrame = new DBRFrame();
+        dbrFrame.size = frame.flvTag.size();
+        dbrFrame.sendStartNano = System.nanoTime();
+        //dbrFrame.sendStartNano = System.currentTimeMillis();
+
         int dts = akamaiTs ? (int) ((System.nanoTime() / 1000 - startTs) / 1000) : frame.dts;
         if (frame.is_video()) {
             if (frame.is_keyframe()) {
@@ -265,6 +275,10 @@ public class SrsFlvMuxerObs {
             mAudioAllocator.release(frame.flvTag);
             mAudioFramesSent++;
         }
+
+        dbrFrame.sendEndNano = System.nanoTime();
+        //dbrFrame.sendEndNano = System.currentTimeMillis();
+        addSentFrame(dbrFrame);
     }
 
     /**
@@ -341,6 +355,173 @@ public class SrsFlvMuxerObs {
     public void sendAudio(ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo) {
         flv.writeAudioSample(byteBuffer, bufferInfo);
     }
+
+
+    ///// OBS ////
+    private final String TAG2 = "OBS";
+    //private final long DBR_INC_THRESHOLD_NANO = TimeUnit.SECONDS.toNanos(30);
+    private final long DBR_INC_THRESHOLD_NANO = TimeUnit.SECONDS.toNanos(10);
+    private final long DBR_TRIGGER_MS = 200;
+    private final long MAX_ESTIMATE_DURATION_MS = 2_000;
+    private final long MIN_ESTIMATE_DURATION_MS = 1_000;
+    private final long maxBitrate = 3 * 1024 * 1024;
+    private final long minBitrate = (int) (0.3 * 1024.0 * 1024.0);
+    private final long initialBitrate = 2 * 1024 * 1024;
+    private final long audioBitrate = 64 * 1024; // TODO provide
+
+    private long incBitrate = initialBitrate / 10;
+    private long estimatedBitrate = 0;
+    private long incTimeout = 0L;
+    private long previousBitrate = initialBitrate;
+    private volatile long currentBitrate = initialBitrate;
+    private long lastDtsMs = 0L;
+    private long dataSize = 0L; // Data sent since last check
+    private final Object bitrateLock = new Object();
+    private Deque<DBRFrame> dbrFrames = new ArrayDeque<>(1000); // Data sent since last check
+
+    public BitrateUpdater bitrateUpdater;
+
+    private boolean addVideoPacket(SrsFlvFrame frame) {
+        check_to_drop_frames(false);
+        check_to_drop_frames(true);
+
+        /*      *//* if currently dropping frames, drop packets until it reaches the
+         * desired priority *//*
+            if (packet->drop_priority < stream->min_priority) {
+                stream->dropped_frames++;
+                return false;
+            } else {
+                stream->min_priority = 0;
+            }*/
+
+        try {
+            mFlvVideoTagCache.add(frame);
+            lastDtsMs = frame.dts;
+            return true;
+        } catch (IllegalStateException e) {
+            return false;
+        }
+    }
+
+    private void addSentFrame(DBRFrame newFrame) {
+        dbrFrames.offerLast(newFrame);
+        DBRFrame frontFrame = dbrFrames.peekFirst();
+        dataSize += newFrame.size;
+
+        Log.d("lol66", "added frames count: " + dbrFrames.size());
+        long sentFramesDurationMs = (newFrame.sendEndNano - frontFrame.sendStartNano) / 1_000_000;
+        //long sentFramesDurationMs = (newFrame.sendEndNano - frontFrame.sendStartNano);
+        Log.d("lol66", "sentFramesDurationMs: " + sentFramesDurationMs);
+        if (sentFramesDurationMs >= MAX_ESTIMATE_DURATION_MS) {
+            dataSize -= frontFrame.size; // why are we doing this?
+            dbrFrames.pollFirst();
+        }
+
+        long byteRate = (sentFramesDurationMs >= MIN_ESTIMATE_DURATION_MS)
+                ? (long) (dataSize / (sentFramesDurationMs / 1000.0))
+                : 0;
+        estimatedBitrate = byteRate * 8;
+
+        if (estimatedBitrate > 0) {
+            estimatedBitrate -= audioBitrate;
+            if (estimatedBitrate < 50)
+                estimatedBitrate = 50; // what's the point?
+        }
+        Log.d("lol33", "Estimated bitrate: " + estimatedBitrate);
+    }
+
+    private void check_to_drop_frames(boolean pFrames) {
+        if (!pFrames) {
+            increaseBitrateIfNeeded();
+        }
+
+        SrsFlvFrame firstVideoFrame = mFlvVideoTagCache.peek();
+        if (firstVideoFrame == null) return;
+
+        long bufferDurationMs = lastDtsMs - firstVideoFrame.dts;
+
+        if (pFrames) {
+            return;
+        }
+
+        Log.d("lol44", "buffer durationMs: " + bufferDurationMs);
+        Log.d("lol44", "frames in cache: " + mFlvVideoTagCache.size());
+
+        if (bufferDurationMs >= DBR_TRIGGER_MS) {
+            bitrateLowered();
+        }
+    }
+
+    private void increaseBitrateIfNeeded() {
+        if (incTimeout == 0L) {
+            incTimeout = System.nanoTime() + DBR_INC_THRESHOLD_NANO;
+        } else if (System.nanoTime() > incTimeout) {
+            //long increasedBitrate = currentBitrate + incBitrate;
+            long increasedBitrate = (long) (currentBitrate * 1.1);
+            Log.d(TAG2, "Increasing bitrate to: " + increasedBitrate);
+            updateBitrate(increasedBitrate);
+        }
+    }
+
+    private boolean bitrateLowered() {
+        long prev_bitrate = previousBitrate;
+        long est_bitrate = 0;
+        long new_bitrate;
+
+        if (estimatedBitrate < currentBitrate) {
+            dataSize = 0;
+            dbrFrames.clear();
+            est_bitrate = estimatedBitrate;
+        }
+
+        if (est_bitrate <= 0) {
+            return false;
+        } else {
+            new_bitrate = est_bitrate;
+        }
+     /*   if (est_bitrate > 0) {
+            new_bitrate = est_bitrate;
+        } else if (prev_bitrate > 0) {
+            new_bitrate = prev_bitrate; // dlaczego poprzedni?
+        } else {
+            return false;
+        }*/
+
+  /*      if (new_bitrate == currentBitrate) {
+            return false;
+        }*/
+
+        //previousBitrate = 0; // dlaczego?
+        updateBitrate(new_bitrate);
+        Log.d(TAG2, "bitrate decreased to: " + currentBitrate);
+        return true;
+    }
+
+    private boolean updateBitrate(long updatedBitrate) {
+        if (updatedBitrate == currentBitrate) {
+            return false;
+        }
+
+        synchronized (bitrateLock) {
+            //long newBitrate = Math.min(maxBitrate, Math.max(minBitrate, updatedBitrate));
+            if (updatedBitrate > previousBitrate && System.nanoTime() < incTimeout) {
+                return false; // we've just decreased bitrate so we cannot increase it now
+            }
+
+            previousBitrate = currentBitrate;
+            currentBitrate = updatedBitrate;
+            //currentBitrate = newBitrate;
+            incTimeout = System.nanoTime() + DBR_INC_THRESHOLD_NANO; // We do it for increase and decrease
+            if (bitrateUpdater != null) {
+                //bitrateUpdater.onNewBitrate(newBitrate);
+                bitrateUpdater.onNewBitrate(updatedBitrate);
+            }
+            Log.d(TAG2, "Bitrate updated from " + previousBitrate + " to " + currentBitrate);
+            return true;
+        }
+    }
+
+    // END OBS //
 
     // E.4.3.1 VIDEODATA
     // Frame Type UB [4]
@@ -1028,7 +1209,8 @@ public class SrsFlvMuxerObs {
         private void flvFrameCacheAdd(SrsFlvFrame frame) {
             try {
                 if (frame.is_video()) {
-                    mFlvVideoTagCache.add(frame);
+                    //mFlvVideoTagCache.add(frame);
+                    addVideoPacket(frame);
                 } else {
                     mFlvAudioTagCache.add(frame);
                 }
@@ -1041,5 +1223,15 @@ public class SrsFlvMuxerObs {
                 }
             }
         }
+    }
+
+    public interface BitrateUpdater {
+        void onNewBitrate(long bitrate);
+    }
+
+    class DBRFrame {
+        public long sendStartNano;
+        public long sendEndNano;
+        int size;
     }
 }

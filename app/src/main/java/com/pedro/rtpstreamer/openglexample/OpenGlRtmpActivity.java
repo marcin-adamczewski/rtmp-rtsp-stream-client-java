@@ -122,7 +122,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
     bitrateAdapter = new BitrateAdapter(new BitrateAdapter.Listener() {
       @Override
       public void onBitrateAdapted(int bitrate) {
-        rtmpCamera1.setVideoBitrateOnFly(bitrate);
+        //rtmpCamera1.setVideoBitrateOnFly(bitrate);
       }
     });
     bitrateAdapter.setMaxBitrate(5 * 1024 * 1024);
@@ -364,7 +364,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
 
   @Override
   public void onNewBitrateRtmp(long bitrate) {
-    bitrateAdapter.adaptBitrate(bitrate);
+    //bitrateAdapter.adaptBitrate(bitrate);
   }
 
   @Override
@@ -406,7 +406,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
               || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo(640, 480, 30, 300 * 1024, false, CameraHelper.getCameraOrientation(this))) {
             button.setText(R.string.stop_button);
             //rtmpCamera1.startStream(etUrl.getText().toString());
-            rtmpCamera1.startStream("rtmp://rtmp-global.cloud.vimeo.com/live/ecf8a836-f527-4ae6-91cf-d7623c5f4184");
+            rtmpCamera1.startStream("rtmp://rtmp-global.cloud.vimeo.com/live/5cb08008-3440-4d9f-9233-253fd6f7a280");
             //rtmpCamera1.startStream("rtmp://10.10.1.146/live/SyBooCh0U");
           } else {
             Toast.makeText(this, "Error preparing stream, This device cant do it",
