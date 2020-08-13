@@ -62,6 +62,7 @@ import com.pedro.encoder.input.gl.render.filters.object.GifObjectFilterRender;
 import com.pedro.encoder.input.gl.render.filters.object.ImageObjectFilterRender;
 import com.pedro.encoder.input.gl.render.filters.object.SurfaceFilterRender;
 import com.pedro.encoder.input.gl.render.filters.object.TextObjectFilterRender;
+import com.pedro.encoder.input.video.CameraHelper;
 import com.pedro.encoder.input.video.CameraOpenException;
 import com.pedro.encoder.utils.gl.TranslateTo;
 import com.pedro.rtplibrary.rtmp.RtmpCamera1;
@@ -388,7 +389,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
       case R.id.b_start_stop:
         if (!rtmpCamera1.isStreaming()) {
           if (rtmpCamera1.isRecording()
-              || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo()) {
+              || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo(1280, 720, 24, 2 * 1024 * 1024, false, CameraHelper.getCameraOrientation(this))) {
             button.setText(R.string.stop_button);
             rtmpCamera1.startStream(etUrl.getText().toString());
           } else {

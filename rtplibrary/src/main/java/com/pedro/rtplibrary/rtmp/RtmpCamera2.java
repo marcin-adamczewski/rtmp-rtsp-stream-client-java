@@ -4,6 +4,8 @@ import android.content.Context;
 import android.media.MediaCodec;
 import android.os.Build;
 import androidx.annotation.RequiresApi;
+
+import android.util.Log;
 import android.view.SurfaceView;
 import android.view.TextureView;
 
@@ -40,6 +42,13 @@ public class RtmpCamera2 extends Camera2Base {
   public RtmpCamera2(OpenGlView openGlView, ConnectCheckerRtmp connectChecker) {
     super(openGlView);
     srsFlvMuxer = new SrsFlvMuxer(connectChecker);
+    srsFlvMuxer.bitrateUpdater = new SrsFlvMuxer.BitrateUpdater() {
+      @Override
+      public void onNewBitrate(long bitrate) {
+        Log.d("DBR", "Bitrate updated to " + bitrate / 1024.0 / 1024.0);
+        setVideoBitrateOnFly((int) bitrate);
+      }
+    };
   }
 
   public RtmpCamera2(LightOpenGlView lightOpenGlView, ConnectCheckerRtmp connectChecker) {

@@ -115,6 +115,7 @@ public class VideoEncoder extends BaseEncoder implements GetCameraData {
       videoFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitRate);
       videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, fps);
       videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, iFrameInterval);
+      //videoFormat.setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR);
       if (hardwareRotation) {
         videoFormat.setInteger("rotation-degrees", rotation);
       }

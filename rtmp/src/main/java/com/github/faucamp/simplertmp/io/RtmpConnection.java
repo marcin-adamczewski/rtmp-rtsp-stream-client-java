@@ -1,5 +1,6 @@
 package com.github.faucamp.simplertmp.io;
 
+import android.media.MediaCodecInfo;
 import android.util.Log;
 
 import com.github.faucamp.simplertmp.RtmpPublisher;
@@ -150,6 +151,7 @@ public class RtmpConnection implements RtmpPublisher {
       if (!tlsEnabled) {
         socket = new Socket();
         SocketAddress socketAddress = new InetSocketAddress(host, port);
+        socket.setSendBufferSize(100 * 1024);
         socket.connect(socketAddress, 5000);
       } else {
         socket = CreateSSLSocket.createSSlSocket(host, port);
@@ -543,7 +545,7 @@ public class RtmpConnection implements RtmpPublisher {
                   + acknowledgementWindowsize);
               sendRtmpPacket(new WindowAckSize(acknowledgementWindowsize, chunkStreamInfo));
               // Set socket option. This line could produce bps calculation problems.
-              socket.setSendBufferSize(acknowledgementWindowsize);
+              //socket.setSendBufferSize(acknowledgementWindowsize);
               break;
             case COMMAND_AMF0:
               handleRxInvoke((Command) rtmpPacket);
