@@ -234,8 +234,17 @@ public class SrsFlvMuxer {
     handler.postDelayed(runnable, delay);
   }
 
+  BitrateEstimator bitrateEstimator = new BitrateEstimator(true);
+
   private boolean connect(String url) {
     this.url = url;
+    bitrateEstimator.listener = new BitrateEstimator.UploadTestListener() {
+      @Override
+      public void onResult(double medianBitrate) {
+        bitrateUpdater.onNewBitrate((long) medianBitrate);
+      }
+    };
+    bitrateEstimator.start();
     if (!connected) {
       Log.i(TAG, String.format("worker: connecting to RTMP server by url=%s\n", url));
       if (publisher.connect(url)) {
@@ -245,99 +254,11 @@ public class SrsFlvMuxer {
     return connected;
   }
 
-  // DBR
-  private final String TAG2 = "DBR";
-  private final long DBR_INC_THRESHOLD_NANO = TimeUnit.SECONDS.toNanos(10);
-  private final long MAX_ESTIMATE_DURATION_MS = 3_000;
-  private final long MIN_ESTIMATE_DURATION_MS = 2_000;
-  private final long maxBitrate = 3 * 1024 * 1024;
-  private final long minBitrate = (int) (0.3 * 1024.0 * 1024.0);
-  private final long initialBitrate = 2 * 1024 * 1024;
-
-  private final Object bitrateLock = new Object();
-  private long currentBitrate = initialBitrate;
-  private double estimatedBitrate = 0;
-  private long incTimeout = 0L;
-  private long dataSize = 0L; // Data sent since last check
-  private long sendStartNano = -1L;
-
   public interface BitrateUpdater {
     void onNewBitrate(long bitrate);
   }
 
   public BitrateUpdater bitrateUpdater;
-
-  private void beforeFrameSent() {
-    if (sendStartNano == -1) {
-      sendStartNano = System.nanoTime();
-    }
-  }
-
-  private void afterFrameSent(int sentFrameSize) {
-    estimateBitrate(sentFrameSize);
-    decreaseBitrateIfNeeded();
-    increaseBitrateIfNeeded();
-  }
-
-  private void estimateBitrate(int sentFrameSize) {
-    dataSize += sentFrameSize;
-    long sentFramesDurationMs = (System.nanoTime() - sendStartNano) / 1000 / 1000;
-
-    if (sentFramesDurationMs < MAX_ESTIMATE_DURATION_MS) {
-      double byteRate = (sentFramesDurationMs >= MIN_ESTIMATE_DURATION_MS)
-              ? dataSize / (sentFramesDurationMs / 1000.0)
-              : 0.0;
-      if (byteRate > 0) {
-        estimatedBitrate = byteRate * 8;
-        Log.d("lol10", "estimatedBitrate: " + estimatedBitrate / 1024.0 / 1024.0);
-      }
-    } else {
-      dataSize = 0;
-      sendStartNano = -1;
-    }
-  }
-
-  private void increaseBitrateIfNeeded() {
-    if (System.nanoTime() >= incTimeout) {
-      long increasedBitrate = (long) (currentBitrate * 1.1);
-      Log.d(TAG2, "increasing");
-      updateBitrate(increasedBitrate);
-    }
-  }
-
-  private void decreaseBitrateIfNeeded() {
-    if (mFlvVideoTagCache.size() > 0) {
-      Log.d("lol2", "cache size: " + mFlvVideoTagCache.size());
-    }
-    if (mFlvVideoTagCache.size() > 2 && estimatedBitrate > 0) {
-      long decreasedBitrate = (long) (estimatedBitrate * 0.8);
-      Log.d(TAG2, "decreasing");
-      updateBitrate(decreasedBitrate);
-    }
-  }
-
-  private boolean updateBitrate(long updatedBitrate) {
-    if (updatedBitrate == currentBitrate) {
-      return false;
-    }
-
-    synchronized (bitrateLock) {
-      long newBitrate = Math.min(maxBitrate, Math.max(minBitrate, updatedBitrate));
-      if (newBitrate > currentBitrate && System.nanoTime() < incTimeout) {
-        return false; // we've just decreased bitrate so we cannot increase it now
-      }
-
-      incTimeout = System.nanoTime() + DBR_INC_THRESHOLD_NANO; // We do it for increase and decrease
-      if (bitrateUpdater != null) {
-        currentBitrate = newBitrate;
-        bitrateUpdater.onNewBitrate(newBitrate);
-        Log.d("lol5", "estimated bitrate: " + estimatedBitrate / 1024.0 / 1024.0);
-      }
-      return true;
-    }
-  }
-
-  // END DBR
 
   private void sendFlvTag(SrsFlvFrame frame) {
     if (!connected || frame == null) {
@@ -351,9 +272,9 @@ public class SrsFlvMuxer {
             frame.flvTag.array().length));
       }
       int frameSize = frame.flvTag.size();
-      beforeFrameSent();
+      bitrateEstimator.beforeFrameSent();
       publisher.publishVideoData(frame.flvTag.array(), frame.flvTag.size(), dts);
-      afterFrameSent(frameSize);
+      bitrateEstimator.afterFrameSent(frameSize);
       mVideoAllocator.release(frame.flvTag);
       mVideoFramesSent++;
     } else if (frame.is_audio()) {
