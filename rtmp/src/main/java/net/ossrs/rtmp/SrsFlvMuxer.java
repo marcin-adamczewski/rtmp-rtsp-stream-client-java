@@ -63,7 +63,8 @@ public class SrsFlvMuxer {
   private boolean needToFindKeyFrame = true;
   private SrsAllocator mVideoAllocator = new SrsAllocator(VIDEO_ALLOC_SIZE);
   private SrsAllocator mAudioAllocator = new SrsAllocator(AUDIO_ALLOC_SIZE);
-  private volatile BlockingQueue<SrsFlvFrame> mFlvVideoTagCache = new LinkedBlockingQueue<>(30);
+  private static final int VIDEO_CACHE_SIZE = 30;
+  private volatile BlockingQueue<SrsFlvFrame> mFlvVideoTagCache = new LinkedBlockingQueue<>(VIDEO_CACHE_SIZE);
   private volatile BlockingQueue<SrsFlvFrame> mFlvAudioTagCache = new LinkedBlockingQueue<>(30);
   private ConnectCheckerRtmp connectCheckerRtmp;
   private int sampleRate = 0;
@@ -82,6 +83,14 @@ public class SrsFlvMuxer {
   private long mDroppedAudioFrames = 0;
   private long mDroppedVideoFrames = 0;
   private long startTs = 0;
+
+  public interface MuxerEventsListener {
+    void beforeVideoFrameSent();
+    void afterVideoFrameSent(int frameSize);
+    void onCongestion(float fillPercents);
+  }
+
+  public MuxerEventsListener muxerEventsListener;
 
   /**
    * constructor.
@@ -234,17 +243,8 @@ public class SrsFlvMuxer {
     handler.postDelayed(runnable, delay);
   }
 
-  BitrateEstimator bitrateEstimator = new BitrateEstimator(true);
-
   private boolean connect(String url) {
     this.url = url;
-    bitrateEstimator.listener = new BitrateEstimator.UploadTestListener() {
-      @Override
-      public void onResult(double medianBitrate) {
-        bitrateUpdater.onNewBitrate((long) medianBitrate);
-      }
-    };
-    bitrateEstimator.start();
     if (!connected) {
       Log.i(TAG, String.format("worker: connecting to RTMP server by url=%s\n", url));
       if (publisher.connect(url)) {
@@ -253,12 +253,6 @@ public class SrsFlvMuxer {
     }
     return connected;
   }
-
-  public interface BitrateUpdater {
-    void onNewBitrate(long bitrate);
-  }
-
-  public BitrateUpdater bitrateUpdater;
 
   private void sendFlvTag(SrsFlvFrame frame) {
     if (!connected || frame == null) {
@@ -272,9 +266,13 @@ public class SrsFlvMuxer {
             frame.flvTag.array().length));
       }
       int frameSize = frame.flvTag.size();
-      bitrateEstimator.beforeFrameSent();
+      if (muxerEventsListener != null) {
+        muxerEventsListener.beforeVideoFrameSent();
+      }
       publisher.publishVideoData(frame.flvTag.array(), frame.flvTag.size(), dts);
-      bitrateEstimator.afterFrameSent(frameSize);
+      if (muxerEventsListener != null) {
+        muxerEventsListener.afterVideoFrameSent(frameSize);
+      }
       mVideoAllocator.release(frame.flvTag);
       mVideoFramesSent++;
     } else if (frame.is_audio()) {
@@ -1046,6 +1044,12 @@ public class SrsFlvMuxer {
       try {
         if (frame.is_video()) {
           mFlvVideoTagCache.add(frame);
+          if (muxerEventsListener != null) {
+            int framesCount = mFlvVideoTagCache.size();
+            if (framesCount > 3) {
+              muxerEventsListener.onCongestion(framesCount / (float) VIDEO_CACHE_SIZE);
+            }
+          }
         } else {
           mFlvAudioTagCache.add(frame);
         }

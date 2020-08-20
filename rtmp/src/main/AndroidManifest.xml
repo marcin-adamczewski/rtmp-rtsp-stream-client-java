@@ -1,1 +1,5 @@
-<manifest package="net.ossrs.rtmp" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="net.ossrs.rtmp">
+
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+</manifest>
