@@ -14,7 +14,7 @@ public class BitrateEstimator {
     private final long intervalDurationMs;
     private final boolean isEndlessEstimation;
     private final boolean lowerEstimation;
-    private final float loweringFraction;
+    private final float loweringFactor;
     private final long maxIntervals;
 
     private long uploadedBytesSoFar = 0L;
@@ -27,11 +27,11 @@ public class BitrateEstimator {
 
     public BitrateEstimator(long testDurationMs, long intervalDurationMs,
                             boolean isEndlessEstimation, boolean lowerEstimation,
-                            float loweringFraction) {
+                            float loweringFactor) {
         this.intervalDurationMs = intervalDurationMs;
         this.isEndlessEstimation = isEndlessEstimation;
         this.lowerEstimation = lowerEstimation;
-        this.loweringFraction = loweringFraction;
+        this.loweringFactor = loweringFactor;
         maxIntervals = testDurationMs / intervalDurationMs;
     }
 
@@ -79,7 +79,7 @@ public class BitrateEstimator {
         if (intervalNo > maxIntervals) {
             if (listener != null) {
                 double medianBitrate = getMedianBitrate(new ArrayList<>(bitrates));
-                double estimatedBitrate = lowerEstimation ? medianBitrate * loweringFraction : medianBitrate;
+                double estimatedBitrate = lowerEstimation ? medianBitrate * loweringFactor : medianBitrate;
                 listener.onResult(estimatedBitrate);
             }
             if (isEndlessEstimation) {

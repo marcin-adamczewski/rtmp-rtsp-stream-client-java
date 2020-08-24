@@ -16,6 +16,8 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
     }
 
     private static final String TAG = "BitrateAdjuster";
+    private static final float MINIMUM_LOWERING_FACTOR = 0.5f;
+    private static final long MINIMUM_TIME_BETWEEN_CONGESTION_MS = 20_000;
     private final BitrateUpdater bitrateUpdater;
     private final Context context;
     @NonNull private BitrateAdjusterConfig config;
@@ -25,6 +27,8 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
     @Nullable private volatile NetworkType currentNetworkType;
     private double currentEstimatedBitrate;
     private volatile boolean skipNewEstimators;
+    private float adjustableLoweringFactor;
+    private long previousCongestionMs;
 
     public BitrateAdjuster(@NonNull Context context, @Nullable BitrateAdjusterConfig config, @NonNull BitrateUpdater bitrateUpdater) {
         this.bitrateUpdater = bitrateUpdater;
@@ -39,6 +43,7 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
             }
         };
         endlessEstimator.start();
+        adjustableLoweringFactor = this.config.loweringFraction;
     }
 
     public void onStreamConnected() {
@@ -49,8 +54,13 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
         networkStateManager.setListener(new NetworkStateManager.NetworkTypeListener() {
             @Override
             public void onNetworkChanged(@NonNull NetworkType networkType) {
-                Log.d("lol", "network changed to: " + networkType);
+                Log.d(TAG, "network changed to: " + networkType);
                 startEstimatorForNewNetwork(networkType);
+                if (currentNetworkType == null || currentNetworkType != networkType) {
+                    // As the current network may be much more stable then previous one,
+                    // we reset lowering factor to default value.
+                    adjustableLoweringFactor = config.loweringFraction;
+                }
             }
         });
     }
@@ -84,28 +94,40 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
         startNewEstimator(createEstimator(false, false), true, (long) defaultBitrateForNetwork);
     }
 
+    // Note that the onCongestion() method gonna be called many times during a congestion.
+    // That's why we want to avoid starting new estimator for each call.
     private void startEstimatorForCongestion(float bufferFill) {
         if (bufferFill > 0.2f &&
                 (currentNetworkType == null || currentNetworkType != NetworkType.NO_CONNECTION)) {
-            Long initialBitrate = currentEstimatedBitrate > 0 ? (long) currentEstimatedBitrate : null;
-            startNewEstimator(createEstimator(false, true), false, initialBitrate);
+            // The initialBitrate helps us recover from congestion quicker.
+            // Then, after the estimator is done the bitrate will be adjusted.
+            Long initialBitrate = currentEstimatedBitrate > 0 ? (long) (adjustableLoweringFactor * currentEstimatedBitrate) : null;
+            boolean hasStarted = startNewEstimator(createEstimator(false, true), false, initialBitrate);
+            if (hasStarted) {
+                adjustLoweringFractionToCongestion();
+            }
         }
     }
 
-    private synchronized void startNewEstimator(
+    /** Returns true if the estimator started **/
+    private synchronized boolean startNewEstimator(
             BitrateEstimator estimator,
             final boolean blockingPriorityEstimator,
             @Nullable Long initialBitrate) {
-        if (skipNewEstimators) {
-            return;
+        // Priority estimator goes first and cancel previous estimators. That way we
+        // can for example cancel current estimator for WiFI when network has been changed to LTE.
+        if (skipNewEstimators && !blockingPriorityEstimator) {
+            return false;
         }
 
         if (blockingPriorityEstimator) {
             skipNewEstimators = true;
         }
 
+        // We don't let other no-priority estimator to run if other estimator is running.
+        // That way we can for example avoid calling congestion estimators multiple times.
         if (!blockingPriorityEstimator && isCurrentEstimatorRunning()) {
-            return;
+            return false;
         }
 
         if (currentEstimator != null) {
@@ -130,6 +152,18 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
             }
         };
         estimator.start();
+        return true;
+    }
+
+    // If congestion happens too often, the estimated value is probably too high. It could happen
+    // when the network speed fluctuates in time. If that's the case we want to slowly reduce
+    // the estimated bitrate lowering factor up to MINIMUM_TIME_BETWEEN_CONGESTION_MS
+    private void adjustLoweringFractionToCongestion() {
+        if (System.currentTimeMillis() - previousCongestionMs < MINIMUM_TIME_BETWEEN_CONGESTION_MS) {
+            adjustableLoweringFactor = Math.max(MINIMUM_LOWERING_FACTOR, adjustableLoweringFactor - 0.1f);
+            Log.d(TAG, "Lowering fraction reduced to: " + adjustableLoweringFactor);
+        }
+        previousCongestionMs = System.currentTimeMillis();
     }
 
     private boolean isCurrentEstimatorRunning() {
@@ -144,7 +178,7 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
 
     private BitrateEstimator createEstimator(boolean isEndlessEstimation, boolean lowerEstimation) {
         return new BitrateEstimator(config.testDurationMs, config.testIntervalDurationMs,
-                isEndlessEstimation, lowerEstimation, config.loweringFraction);
+                isEndlessEstimation, lowerEstimation, adjustableLoweringFactor);
     }
 
     private int getDefaultBitrateForNetwork(NetworkType networkType) {

@@ -35,7 +35,7 @@ public class BitrateAdjusterConfig {
         }
     }
 
-    private static final long DEFAULT_TEST_DURATION_MS = 10_000;
+    private static final long DEFAULT_TEST_DURATION_MS = 8_000;
     private static final long DEFAULT_INTERVAL_DURATION_MS = 1_000;
     private static final float DEFAULT_LOWERING_FRACTION = 0.9f;
 
