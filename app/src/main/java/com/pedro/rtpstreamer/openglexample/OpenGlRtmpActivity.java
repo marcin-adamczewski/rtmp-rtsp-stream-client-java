@@ -423,7 +423,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
           if (rtmpCamera1.isRecording()
               || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo(1280, 720, 24, 2 * 1024 * 1024, false, CameraHelper.getCameraOrientation(this))) {
             button.setText(R.string.stop_button);
-            rtmpCamera1.startStream("rtmp://rtmp-global.cloud.vimeo.com/live/c0e0319d-3604-41d3-8207-0c7e270a68cf");
+            rtmpCamera1.startStream("rtmp://rtmp-global.cloud.vimeo.com/live/c6a6c1dd-0bcf-402a-8aed-402492529144");
           } else {
             Toast.makeText(this, "Error preparing stream, This device cant do it",
                 Toast.LENGTH_SHORT).show();

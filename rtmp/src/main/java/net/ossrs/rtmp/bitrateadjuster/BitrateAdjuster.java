@@ -3,9 +3,11 @@ package net.ossrs.rtmp.bitrateadjuster;
 import android.content.Context;
 import android.os.Build;
 import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+
 import net.ossrs.rtmp.SrsFlvMuxer;
 
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -17,7 +19,7 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
 
     private static final String TAG = "BitrateAdjuster";
     private static final float MINIMUM_LOWERING_FACTOR = 0.5f;
-    private static final long MINIMUM_TIME_BETWEEN_CONGESTION_MS = 20_000;
+    private static final long MINIMUM_TIME_BETWEEN_CONGESTION_ESTIMATORS_MS = 10_000;
     private final BitrateUpdater bitrateUpdater;
     private final Context context;
     @NonNull private BitrateAdjusterConfig config;
@@ -28,7 +30,7 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
     private double currentEstimatedBitrate;
     private volatile boolean skipNewEstimators;
     private float adjustableLoweringFactor;
-    private long previousCongestionMs;
+    private long previousStartTimeMsOfEstimationForCongestion;
 
     public BitrateAdjuster(@NonNull Context context, @Nullable BitrateAdjusterConfig config, @NonNull BitrateUpdater bitrateUpdater) {
         this.bitrateUpdater = bitrateUpdater;
@@ -98,18 +100,23 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
     // That's why we want to avoid starting new estimator for each call.
     private void startEstimatorForCongestion(float bufferFill) {
         if (bufferFill > 0.2f &&
-                (currentNetworkType == null || currentNetworkType != NetworkType.NO_CONNECTION)) {
+                (currentNetworkType == null || currentNetworkType != NetworkType.NO_CONNECTION) &&
+                isMinimumTimeBetweenCongestionBitrates()
+        ) {
             // The initialBitrate helps us recover from congestion quicker.
             // Then, after the estimator is done the bitrate will be adjusted.
             Long initialBitrate = currentEstimatedBitrate > 0 ? (long) (adjustableLoweringFactor * currentEstimatedBitrate) : null;
             boolean hasStarted = startNewEstimator(createEstimator(false, true), false, initialBitrate);
             if (hasStarted) {
                 adjustLoweringFractionToCongestion();
+                previousStartTimeMsOfEstimationForCongestion = System.currentTimeMillis();
             }
         }
     }
 
-    /** Returns true if the estimator started **/
+    /**
+     * Returns true if the estimator started
+     **/
     private synchronized boolean startNewEstimator(
             BitrateEstimator estimator,
             final boolean blockingPriorityEstimator,
@@ -159,11 +166,22 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
     // when the network speed fluctuates in time. If that's the case we want to slowly reduce
     // the estimated bitrate lowering factor up to MINIMUM_TIME_BETWEEN_CONGESTION_MS
     private void adjustLoweringFractionToCongestion() {
-        if (System.currentTimeMillis() - previousCongestionMs < MINIMUM_TIME_BETWEEN_CONGESTION_MS) {
+        if (System.currentTimeMillis() < minimumTimeWhenNextEstimatorForCongestionCanBeStarted() + 20_000) {
             adjustableLoweringFactor = Math.max(MINIMUM_LOWERING_FACTOR, adjustableLoweringFactor - 0.1f);
             Log.d(TAG, "Lowering fraction reduced to: " + adjustableLoweringFactor);
         }
-        previousCongestionMs = System.currentTimeMillis();
+    }
+
+    // Even though the previous estimator for congestion estimated bitrate correctly we have to
+    // give some time to send everything out from the buffer before congestion is gone.
+    // That's why we want to wait MINIMUM_TIME_BETWEEN_CONGESTION_ESTIMATORS_MS before starting
+    // a new estimator.
+    private boolean isMinimumTimeBetweenCongestionBitrates() {
+        return System.currentTimeMillis() > minimumTimeWhenNextEstimatorForCongestionCanBeStarted();
+    }
+
+    private long minimumTimeWhenNextEstimatorForCongestionCanBeStarted() {
+        return previousStartTimeMsOfEstimationForCongestion + config.testDurationMs + MINIMUM_TIME_BETWEEN_CONGESTION_ESTIMATORS_MS;
     }
 
     private boolean isCurrentEstimatorRunning() {
