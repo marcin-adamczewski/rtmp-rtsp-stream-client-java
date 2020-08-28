@@ -16,21 +16,25 @@ public class BitrateAdjusterConfig {
     }
 
     public interface BitrateForNetwork {
-        int getDefaultMegaBitrateForNetwork(NetworkType networkType);
+        int getDefaultBitrateForNetwork(NetworkType networkType);
+    }
+
+    static int fromMbToBits(int megaBits) {
+        return megaBits * 1024 * 1024;
     }
 
     public static class DefaultBitrateForNetwork implements BitrateForNetwork {
         @Override
-        public int getDefaultMegaBitrateForNetwork(NetworkType networkType) {
+        public int getDefaultBitrateForNetwork(NetworkType networkType) {
             switch (networkType) {
                 case WIFI:
-                    return 3;
+                    return fromMbToBits(3);
                 case FOUR_G:
-                    return 2;
+                    return fromMbToBits(2);
                 case THREE_G:
-                    return 1;
+                    return fromMbToBits(1);
                 default:
-                    return 1;
+                    return fromMbToBits(1);
             }
         }
     }

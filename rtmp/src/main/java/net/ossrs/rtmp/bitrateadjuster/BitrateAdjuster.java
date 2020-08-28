@@ -190,16 +190,12 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
                 !currentEstimator.isFinished();
     }
 
-    private int fromMbToBits(int megaBits) {
-        return megaBits * 1024 * 1024;
-    }
-
     private BitrateEstimator createEstimator(boolean isEndlessEstimation, boolean lowerEstimation) {
         return new BitrateEstimator(config.testDurationMs, config.testIntervalDurationMs,
                 isEndlessEstimation, lowerEstimation, adjustableLoweringFactor);
     }
 
     private int getDefaultBitrateForNetwork(NetworkType networkType) {
-        return fromMbToBits(config.bitrateForNetwork.getDefaultMegaBitrateForNetwork(networkType));
+        return config.bitrateForNetwork.getDefaultBitrateForNetwork(networkType);
     }
 }
