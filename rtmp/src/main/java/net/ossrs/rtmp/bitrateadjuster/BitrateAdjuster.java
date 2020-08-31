@@ -88,6 +88,20 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
         endlessEstimator.afterFrameSent(frameSize);
     }
 
+    public void stop() {
+        if (currentEstimator != null) {
+            currentEstimator.finish();
+        }
+        endlessEstimator.finish();
+    }
+
+    public void clear() {
+        stop();
+        if (networkStateManager != null) {
+            networkStateManager.setListener(null);
+        }
+    }
+
     private void startEstimatorForNewNetwork(NetworkType networkType) {
         currentNetworkType = networkType;
         if (networkType == NetworkType.NO_CONNECTION) return;
