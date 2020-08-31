@@ -7,6 +7,7 @@ import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -62,9 +63,11 @@ import com.pedro.encoder.input.gl.render.filters.object.GifObjectFilterRender;
 import com.pedro.encoder.input.gl.render.filters.object.ImageObjectFilterRender;
 import com.pedro.encoder.input.gl.render.filters.object.SurfaceFilterRender;
 import com.pedro.encoder.input.gl.render.filters.object.TextObjectFilterRender;
+import com.pedro.encoder.input.video.CameraCallbacks;
+import com.pedro.encoder.input.video.CameraHelper;
 import com.pedro.encoder.input.video.CameraOpenException;
 import com.pedro.encoder.utils.gl.TranslateTo;
-import com.pedro.rtplibrary.rtmp.RtmpCamera1;
+import com.pedro.rtplibrary.rtmp.RtmpCamera2;
 import com.pedro.rtplibrary.view.OpenGlView;
 import com.pedro.rtpstreamer.R;
 import java.io.File;
@@ -72,6 +75,9 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+
+import net.ossrs.rtmp.bitrateadjuster.BitrateAdjuster;
+
 import net.ossrs.rtmp.ConnectCheckerRtmp;
 
 /**
@@ -79,12 +85,12 @@ import net.ossrs.rtmp.ConnectCheckerRtmp;
  * {@link com.pedro.rtplibrary.base.Camera1Base}
  * {@link com.pedro.rtplibrary.rtmp.RtmpCamera1}
  */
-@RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class OpenGlRtmpActivity extends AppCompatActivity
     implements ConnectCheckerRtmp, View.OnClickListener, SurfaceHolder.Callback,
     View.OnTouchListener {
 
-  private RtmpCamera1 rtmpCamera1;
+  private RtmpCamera2 rtmpCamera1;
   private Button button;
   private Button bRecord;
   private EditText etUrl;
@@ -94,6 +100,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
       + "/rtmp-rtsp-stream-client-java");
   private OpenGlView openGlView;
   private SpriteGestureController spriteGestureController = new SpriteGestureController();
+  private BitrateAdjuster bitrateAdjuster;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -109,9 +116,26 @@ public class OpenGlRtmpActivity extends AppCompatActivity
     switchCamera.setOnClickListener(this);
     etUrl = findViewById(R.id.et_rtp_url);
     etUrl.setHint(R.string.hint_rtmp);
-    rtmpCamera1 = new RtmpCamera1(openGlView, this);
+    rtmpCamera1 = new RtmpCamera2(openGlView, this);
     openGlView.getHolder().addCallback(this);
     openGlView.setOnTouchListener(this);
+    rtmpCamera1.setCameraCallbacks(new CameraCallbacks() {
+      @Override
+      public void onCameraChanged(boolean isFrontCamera) {
+        // Note it's gonna flip front camera on the stream!
+        rtmpCamera1.getGlInterface().setIsStreamHorizontalFlip(isFrontCamera);
+      }
+    });
+    rtmpCamera1.setReTries(6);
+
+    bitrateAdjuster = new BitrateAdjuster(this, null, new BitrateAdjuster.BitrateUpdater() {
+      @Override
+      public void onNewBitrate(long bitrate) {
+        Log.d("lol2", "setting new bitrate to: " + String.format("%.00f", bitrate / 1024.0 / 1024.0));
+        rtmpCamera1.setVideoBitrateOnFly((int) bitrate);
+      }
+    });
+    rtmpCamera1.setMuxerListener(bitrateAdjuster);
   }
 
   @Override
@@ -326,6 +350,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
 
   @Override
   public void onConnectionSuccessRtmp() {
+    bitrateAdjuster.onStreamConnected();
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
@@ -339,10 +364,16 @@ public class OpenGlRtmpActivity extends AppCompatActivity
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
-        Toast.makeText(OpenGlRtmpActivity.this, "Connection failed. " + reason, Toast.LENGTH_SHORT)
-            .show();
-        rtmpCamera1.stopStream();
-        button.setText(R.string.start_button);
+        if (rtmpCamera1.reTry(5000, reason)) {
+          Toast.makeText(OpenGlRtmpActivity.this, "Retry", Toast.LENGTH_SHORT)
+                  .show();
+        } else {
+          Toast.makeText(OpenGlRtmpActivity.this, "Connection failed. " + reason, Toast.LENGTH_SHORT)
+                  .show();
+          rtmpCamera1.stopStream();
+          rtmpCamera1.setReTries(6);
+          button.setText(R.string.start_button);
+        }
       }
     });
   }
@@ -388,9 +419,9 @@ public class OpenGlRtmpActivity extends AppCompatActivity
       case R.id.b_start_stop:
         if (!rtmpCamera1.isStreaming()) {
           if (rtmpCamera1.isRecording()
-              || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo()) {
+              || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo(1280, 720, 24, 2 * 1024 * 1024, false, CameraHelper.getCameraOrientation(this))) {
             button.setText(R.string.stop_button);
-            rtmpCamera1.startStream(etUrl.getText().toString());
+            rtmpCamera1.startStream("rtmp://rtmp-global.cloud.vimeo.com/live/c6a6c1dd-0bcf-402a-8aed-402492529144");
           } else {
             Toast.makeText(this, "Error preparing stream, This device cant do it",
                 Toast.LENGTH_SHORT).show();

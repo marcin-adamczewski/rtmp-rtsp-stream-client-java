@@ -4,6 +4,7 @@ import android.content.Context;
 import android.media.MediaCodec;
 import android.os.Build;
 import androidx.annotation.RequiresApi;
+
 import android.view.SurfaceView;
 import android.view.TextureView;
 
@@ -50,6 +51,10 @@ public class RtmpCamera2 extends Camera2Base {
   public RtmpCamera2(Context context, boolean useOpengl, ConnectCheckerRtmp connectChecker) {
     super(context, useOpengl);
     srsFlvMuxer = new SrsFlvMuxer(connectChecker);
+  }
+
+  public void setMuxerListener(SrsFlvMuxer.MuxerEventsListener muxerEventsListener) {
+    srsFlvMuxer.muxerEventsListener = muxerEventsListener;
   }
 
   /**
