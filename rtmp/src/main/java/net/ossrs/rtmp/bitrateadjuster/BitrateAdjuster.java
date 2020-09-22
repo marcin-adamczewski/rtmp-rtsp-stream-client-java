@@ -68,7 +68,7 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
     }
 
     @Override
-    public void onCongestion(float bufferFill) {
+    public void onBufferSizeChanged(float bufferFill) {
         startEstimatorForCongestion(bufferFill);
     }
 
@@ -113,7 +113,8 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
     // Note that the onCongestion() method gonna be called many times during a congestion.
     // That's why we want to avoid starting new estimator for each call.
     private void startEstimatorForCongestion(float bufferFill) {
-        if (bufferFill > 0.2f &&
+        boolean isCongestion = bufferFill > 0.2f;
+        if (isCongestion &&
                 (currentNetworkType == null || currentNetworkType != NetworkType.NO_CONNECTION) &&
                 isMinimumTimeBetweenCongestionBitrates()
         ) {

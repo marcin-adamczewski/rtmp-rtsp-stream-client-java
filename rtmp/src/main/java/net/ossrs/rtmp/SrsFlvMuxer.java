@@ -87,7 +87,7 @@ public class SrsFlvMuxer {
   public interface MuxerEventsListener {
     void beforeVideoFrameSent();
     void afterVideoFrameSent(int frameSize);
-    void onCongestion(float fillPercents);
+    void onBufferSizeChanged(float fillPercents);
   }
 
   public MuxerEventsListener muxerEventsListener;
@@ -1044,12 +1044,7 @@ public class SrsFlvMuxer {
       try {
         if (frame.is_video()) {
           mFlvVideoTagCache.add(frame);
-          if (muxerEventsListener != null) {
-            int framesCount = mFlvVideoTagCache.size();
-            if (framesCount > 3) {
-              muxerEventsListener.onCongestion(framesCount / (float) VIDEO_CACHE_SIZE);
-            }
-          }
+          notifyBufferSizeChanged();
         } else {
           mFlvAudioTagCache.add(frame);
         }
@@ -1057,9 +1052,17 @@ public class SrsFlvMuxer {
         Log.i(TAG, "frame discarded");
         if (frame.is_video()) {
           mDroppedVideoFrames++;
+          notifyBufferSizeChanged();
         } else {
           mDroppedAudioFrames++;
         }
+      }
+    }
+
+    private void notifyBufferSizeChanged() {
+      if (muxerEventsListener != null) {
+        int framesCount = mFlvVideoTagCache.size();
+        muxerEventsListener.onBufferSizeChanged(framesCount / (float) VIDEO_CACHE_SIZE);
       }
     }
   }

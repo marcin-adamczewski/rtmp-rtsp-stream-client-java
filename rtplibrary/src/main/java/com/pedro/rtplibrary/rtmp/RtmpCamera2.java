@@ -181,5 +181,9 @@ public class RtmpCamera2 extends Camera2Base {
   protected void getH264DataRtp(ByteBuffer h264Buffer, MediaCodec.BufferInfo info) {
     srsFlvMuxer.sendVideo(h264Buffer, info);
   }
+
+  public boolean isConnected() {
+    return srsFlvMuxer.isConnected();
+  }
 }
 
