@@ -3,16 +3,24 @@ package net.ossrs.rtmp
 import android.net.TrafficStats
 import android.os.Process
 import android.util.Log
+import com.github.faucamp.simplertmp.BenchmarkRtmpPublisher
 import com.github.faucamp.simplertmp.DefaultRtmpPublisher
+import kotlin.random.Random
 
-class SrsFlvFakeMuxer(private val connectCheckerRtmp: ConnectCheckerRtmp) {
+class SrsFlvBenchmarkMuxer(
+        dataSizeBytes: Int,
+        private val rounds: Int,
+        private val connectCheckerRtmp: ConnectCheckerRtmp
+) {
 
     private var url: String? = null
     private var connected = false
-    private val publisher = DefaultRtmpPublisher(connectCheckerRtmp)
+    private val publisher = BenchmarkRtmpPublisher(connectCheckerRtmp)
     private var worker: Thread? = null
 
-    private val fakeData = ByteArray(1024 * 1024)
+    private val fakeData = ByteArray(dataSizeBytes).apply {
+        Random.nextBytes(this)
+    }
 
     fun start(rtmpUrl: String) {
         worker = Thread(Runnable {
@@ -21,11 +29,9 @@ class SrsFlvFakeMuxer(private val connectCheckerRtmp: ConnectCheckerRtmp) {
                 return@Runnable
             }
             Log.d("lolx", "connected")
-            checkSpeed(fakeData)
-            checkSpeed(fakeData.copyOfRange(0, fakeData.size / 2))
-            checkSpeed(fakeData.copyOfRange(0, fakeData.size / 4))
-            checkSpeed(fakeData.copyOfRange(0, fakeData.size / 8))
-
+            repeat(rounds) { index ->
+                checkSpeed(fakeData.copyOfRange(0, fakeData.size / (index + 1)))
+            }
             stop(connectCheckerRtmp)
         })
         worker?.start()
@@ -48,7 +54,7 @@ class SrsFlvFakeMuxer(private val connectCheckerRtmp: ConnectCheckerRtmp) {
     }
 
     private fun sendFakeData(fakeData: ByteArray) {
-        publisher.publishFakeData(fakeData)
+        publisher.publishFakeVideoData(fakeData)
     }
 
     private fun connect(serverUrl: String): Boolean {
@@ -73,7 +79,7 @@ class SrsFlvFakeMuxer(private val connectCheckerRtmp: ConnectCheckerRtmp) {
             worker?.interrupt()
         }
         worker = null
-        Thread(Runnable { disconnect(connectCheckerRtmp) }).start()
+        Thread { disconnect(connectCheckerRtmp) }.start()
     }
 
     private fun disconnect(connectChecker: ConnectCheckerRtmp?) {
