@@ -1,26 +1,29 @@
 package net.ossrs.rtmp
 
-import android.net.TrafficStats
 import android.os.Process
 import android.util.Log
 import com.github.faucamp.simplertmp.BenchmarkRtmpPublisher
-import com.github.faucamp.simplertmp.DefaultRtmpPublisher
 import kotlin.random.Random
 
-class SrsFlvBenchmarkMuxer(
+class NetworkBenchmark(
         dataSizeBytes: Int,
         private val rounds: Int,
-        private val connectCheckerRtmp: ConnectCheckerRtmp
+        private val connectCheckerRtmp: ConnectCheckerRtmp,
+        val listener: SpeedBenchmarkListener
 ) {
 
-    private var url: String? = null
+    interface SpeedBenchmarkListener {
+        fun onSpeedEstimated(speedMbs: Double)
+    }
+
+    private val TAG = "NetoworkBenchmark"
     private var connected = false
     private val publisher = BenchmarkRtmpPublisher(connectCheckerRtmp)
     private var worker: Thread? = null
-
     private val fakeData = ByteArray(dataSizeBytes).apply {
         Random.nextBytes(this)
     }
+    private val speeds = mutableListOf<Double>()
 
     fun start(rtmpUrl: String) {
         worker = Thread(Runnable {
@@ -28,29 +31,31 @@ class SrsFlvBenchmarkMuxer(
             if (!connect(rtmpUrl)) {
                 return@Runnable
             }
-            Log.d("lolx", "connected")
-            repeat(rounds) { index ->
-                checkSpeed(fakeData.copyOfRange(0, fakeData.size / (index + 1)))
-            }
+            runBenchmark()
             stop(connectCheckerRtmp)
         })
         worker?.start()
     }
 
-    private fun checkSpeed(fakeData: ByteArray) {
+    private fun runBenchmark() {
+        speeds.clear()
+        repeat(rounds) { index ->
+            val speed = checkSpeed(fakeData.copyOfRange(0, fakeData.size / (index + 1)))
+            speeds.add(speed)
+        }
+        val medianSpeed = getMedianSpeed()
+        listener.onSpeedEstimated(medianSpeed)
+    }
+
+    private fun checkSpeed(fakeData: ByteArray): Double {
         val dataSize: Int = fakeData.size
-        val transferBefore = TrafficStats.getTotalTxBytes()
         val startTimeNs = System.nanoTime()
         sendFakeData(fakeData)
         val sendTime = (System.nanoTime() - startTimeNs) / 1000.0 / 1000.0 / 1000.0
-        val totalTransfer = TrafficStats.getTotalTxBytes() - transferBefore
-        val speed: Double = dataSize / sendTime
-        val speed2: Double = totalTransfer / sendTime
-        Log.d("lolx", "Checking speed of sending: ${dataSize / 1024.0 / 1024.0 * 8} Mb")
-        Log.d("lolx", "Total transfer ${totalTransfer / 1024.0 / 1024.0 * 8} Mb")
-        Log.d("lolx", "speed: ${speed / 1024.0 / 1024.0 * 8.0}")
-        Log.d("lolx", "speed2: ${speed2 / 1024.0 / 1024.0 * 8.0}")
-        Log.d("lolx", "time: $sendTime")
+        val speed: Double = dataSize / sendTime / 1024.0 / 1024.0 * 8.0
+        Log.d(TAG, "Checking speed of sending: ${dataSize / 1024.0 / 1024.0 * 8} Mb")
+        Log.d(TAG, "speed: $speed")
+        return speed
     }
 
     private fun sendFakeData(fakeData: ByteArray) {
@@ -58,7 +63,6 @@ class SrsFlvBenchmarkMuxer(
     }
 
     private fun connect(serverUrl: String): Boolean {
-        url = serverUrl
         if (!connected) {
             if (publisher.connect(serverUrl)) {
                 connected = publisher.publish("live")
@@ -90,5 +94,17 @@ class SrsFlvBenchmarkMuxer(
         }
         connected = false
         connectChecker?.onDisconnectRtmp()
+    }
+
+    private fun getMedianSpeed(): Double {
+        speeds.sort()
+        if (speeds.isEmpty()) {
+            return 0.0
+        }
+        return if (speeds.size % 2 == 0) {
+                (speeds[speeds.size / 2] + speeds[speeds.size / 2 - 1]) / 2.0
+            } else {
+                speeds[speeds.size / 2]
+            }
     }
 }

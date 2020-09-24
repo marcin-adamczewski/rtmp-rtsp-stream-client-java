@@ -79,7 +79,7 @@ import java.util.Locale;
 import net.ossrs.rtmp.bitrateadjuster.BitrateAdjuster;
 
 import net.ossrs.rtmp.ConnectCheckerRtmp;
-import net.ossrs.rtmp.SrsFlvBenchmarkMuxer;
+import net.ossrs.rtmp.NetworkBenchmark;
 
 /**
  * More documentation see:
@@ -138,8 +138,12 @@ public class OpenGlRtmpActivity extends AppCompatActivity
     });
     rtmpCamera1.setMuxerListener(bitrateAdjuster);
 
-    new SrsFlvBenchmarkMuxer(1024 * 1024, 4, this)
-            .start("rtmp://rtmp-global.cloud.vimeo.com/live/65724139-6b24-4f3c-90ce-4f3e6d89f711");
+    new NetworkBenchmark(1024 * 1024 / 8 * 3, 4, this, new NetworkBenchmark.SpeedBenchmarkListener() {
+      @Override
+      public void onSpeedEstimated(double speedMbs) {
+        Log.d("lol3", "estimated network speed: " + speedMbs);
+      }
+    }).start("rtmp://rtmp-global.cloud.vimeo.com/live/65724139-6b24-4f3c-90ce-4f3e6d89f711");
   }
 
   @Override
