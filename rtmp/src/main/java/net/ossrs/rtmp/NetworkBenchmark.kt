@@ -5,9 +5,13 @@ import android.util.Log
 import com.github.faucamp.simplertmp.BenchmarkRtmpPublisher
 import kotlin.random.Random
 
+/** Estimate network speed by sending random bytes to given RTMP server
+ * @param dataSizeBytes is the amount of data to be send
+ * It is not recommended to send data less than 1Mb as the estimation
+ * may not be accurate. Don't pass the @param dataSizeBytes too high to avoid OOM.
+ */
 class NetworkBenchmark(
-        dataSizeBytes: Int,
-        private val rounds: Int,
+        private val dataSizeBytes: Int,
         private val connectCheckerRtmp: ConnectCheckerRtmp,
         val listener: SpeedBenchmarkListener
 ) {
@@ -23,7 +27,6 @@ class NetworkBenchmark(
     private val fakeData = ByteArray(dataSizeBytes).apply {
         Random.nextBytes(this)
     }
-    private val speeds = mutableListOf<Double>()
 
     fun start(rtmpUrl: String) {
         worker = Thread(Runnable {
@@ -38,24 +41,19 @@ class NetworkBenchmark(
     }
 
     private fun runBenchmark() {
-        speeds.clear()
-        repeat(rounds) { index ->
-            val speed = checkSpeed(fakeData.copyOfRange(0, fakeData.size / (index + 1)))
-            speeds.add(speed)
+        val sampleDataSize = ByteArray(10 * 1024).apply {
+            Random.nextBytes(this)
         }
-        val medianSpeed = getMedianSpeed()
-        listener.onSpeedEstimated(medianSpeed)
-    }
+        val iterations = fakeData.size / sampleDataSize.size
+        Log.d(TAG, "iterations: $iterations")
 
-    private fun checkSpeed(fakeData: ByteArray): Double {
-        val dataSize: Int = fakeData.size
         val startTimeNs = System.nanoTime()
-        sendFakeData(fakeData)
-        val sendTime = (System.nanoTime() - startTimeNs) / 1000.0 / 1000.0 / 1000.0
-        val speed: Double = dataSize / sendTime / 1024.0 / 1024.0 * 8.0
-        Log.d(TAG, "Checking speed of sending: ${dataSize / 1024.0 / 1024.0 * 8} Mb")
+        sendFakeData(ByteArray(dataSizeBytes).apply { Random.nextBytes(this) })
+        val sendTime = (System.nanoTime() - startTimeNs) / 1_000_000_000.0
+        val speed: Double = fakeData.size / sendTime / 1024.0 / 1024.0 * 8.0
+
         Log.d(TAG, "speed: $speed")
-        return speed
+        listener.onSpeedEstimated(speed)
     }
 
     private fun sendFakeData(fakeData: ByteArray) {
@@ -81,9 +79,10 @@ class NetworkBenchmark(
             worker?.join(100)
         } catch (e: InterruptedException) {
             worker?.interrupt()
+        } finally {
+            worker = null
+            Thread { disconnect(connectCheckerRtmp) }.start()
         }
-        worker = null
-        Thread { disconnect(connectCheckerRtmp) }.start()
     }
 
     private fun disconnect(connectChecker: ConnectCheckerRtmp?) {
@@ -91,20 +90,9 @@ class NetworkBenchmark(
             publisher.close()
         } catch (e: IllegalStateException) {
             // Ignore illegal state.
+        } finally {
+            connected = false
+            connectChecker?.onDisconnectRtmp()
         }
-        connected = false
-        connectChecker?.onDisconnectRtmp()
-    }
-
-    private fun getMedianSpeed(): Double {
-        speeds.sort()
-        if (speeds.isEmpty()) {
-            return 0.0
-        }
-        return if (speeds.size % 2 == 0) {
-                (speeds[speeds.size / 2] + speeds[speeds.size / 2 - 1]) / 2.0
-            } else {
-                speeds[speeds.size / 2]
-            }
     }
 }

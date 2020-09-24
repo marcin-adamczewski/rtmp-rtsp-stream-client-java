@@ -18,6 +18,8 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import com.pedro.encoder.input.gl.SpriteGestureController;
@@ -138,12 +140,42 @@ public class OpenGlRtmpActivity extends AppCompatActivity
     });
     rtmpCamera1.setMuxerListener(bitrateAdjuster);
 
-    new NetworkBenchmark(1024 * 1024 / 8 * 3, 4, this, new NetworkBenchmark.SpeedBenchmarkListener() {
+    new NetworkBenchmark(1024 * 1024, new ConnectCheckerRtmp() {
+      @Override
+      public void onConnectionSuccessRtmp() {
+
+      }
+
+      @Override
+      public void onConnectionFailedRtmp(@NonNull String reason) {
+
+      }
+
+      @Override
+      public void onNewBitrateRtmp(long bitrate) {
+
+      }
+
+      @Override
+      public void onDisconnectRtmp() {
+
+      }
+
+      @Override
+      public void onAuthErrorRtmp() {
+
+      }
+
+      @Override
+      public void onAuthSuccessRtmp() {
+
+      }
+    }, new NetworkBenchmark.SpeedBenchmarkListener() {
       @Override
       public void onSpeedEstimated(double speedMbs) {
         Log.d("lol3", "estimated network speed: " + speedMbs);
       }
-    }).start("rtmp://rtmp-global.cloud.vimeo.com/live/65724139-6b24-4f3c-90ce-4f3e6d89f711");
+    }).start("rtmp://rtmp-global.cloud.vimeo.com/live/86fa089a-4ec4-412b-8b67-79480c8447a8");
   }
 
   @Override
