@@ -1,6 +1,5 @@
 package com.github.faucamp.simplertmp.io;
 
-import android.media.MediaCodecInfo;
 import android.util.Log;
 
 import com.github.faucamp.simplertmp.RtmpPublisher;
@@ -16,7 +15,6 @@ import com.github.faucamp.simplertmp.packets.Command;
 import com.github.faucamp.simplertmp.packets.Data;
 import com.github.faucamp.simplertmp.packets.Handshake;
 import com.github.faucamp.simplertmp.packets.RtmpPacket;
-import com.github.faucamp.simplertmp.packets.SetPeerBandwidth;
 import com.github.faucamp.simplertmp.packets.UserControl;
 import com.github.faucamp.simplertmp.packets.Video;
 import com.github.faucamp.simplertmp.packets.WindowAckSize;
@@ -29,7 +27,6 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.net.SocketException;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -151,7 +148,7 @@ public class RtmpConnection implements RtmpPublisher {
       if (!tlsEnabled) {
         socket = new Socket();
         SocketAddress socketAddress = new InetSocketAddress(host, port);
-        socket.setSendBufferSize(100 * 1024);
+        socket.setSendBufferSize(10 * 1024); // This buffer has to be low, otherwise we won't be able to estimate real upload speed and then adjust bitrate in BitrateAdjuster and NetworkBenchmark.
         socket.connect(socketAddress, 5000);
       } else {
         socket = CreateSSLSocket.createSSlSocket(host, port);

@@ -18,6 +18,8 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import com.pedro.encoder.input.gl.SpriteGestureController;
@@ -76,9 +78,11 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+import net.ossrs.rtmp.ConnectCheckerRtmpAdapter;
 import net.ossrs.rtmp.bitrateadjuster.BitrateAdjuster;
 
 import net.ossrs.rtmp.ConnectCheckerRtmp;
+import net.ossrs.rtmp.NetworkBenchmark;
 
 /**
  * More documentation see:
@@ -136,6 +140,13 @@ public class OpenGlRtmpActivity extends AppCompatActivity
       }
     });
     rtmpCamera1.setMuxerListener(bitrateAdjuster);
+
+    new NetworkBenchmark(1024 * 1024 / 8, new ConnectCheckerRtmpAdapter() {}, new NetworkBenchmark.SpeedBenchmarkListener() {
+      @Override
+      public void onSpeedEstimated(double speedMbs) {
+        Log.d("lol3", "estimated network speed: " + speedMbs);
+      }
+    }).start("rtmp://rtmp-global.cloud.vimeo.com/live/c9bb6460-364b-439a-8db7-3d17acae234b");
   }
 
   @Override

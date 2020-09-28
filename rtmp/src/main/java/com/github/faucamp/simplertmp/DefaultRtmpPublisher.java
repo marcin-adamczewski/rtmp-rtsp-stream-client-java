@@ -10,7 +10,7 @@ import net.ossrs.rtmp.ConnectCheckerRtmp;
  */
 public class DefaultRtmpPublisher implements RtmpPublisher {
 
-  private RtmpConnection rtmpConnection;
+  protected RtmpConnection rtmpConnection;
 
   public DefaultRtmpPublisher(ConnectCheckerRtmp connectCheckerRtmp) {
     rtmpConnection = new RtmpConnection(connectCheckerRtmp);
