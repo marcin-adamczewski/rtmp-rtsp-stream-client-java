@@ -78,6 +78,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+import net.ossrs.rtmp.ConnectCheckerRtmpAdapter;
 import net.ossrs.rtmp.bitrateadjuster.BitrateAdjuster;
 
 import net.ossrs.rtmp.ConnectCheckerRtmp;
@@ -140,42 +141,12 @@ public class OpenGlRtmpActivity extends AppCompatActivity
     });
     rtmpCamera1.setMuxerListener(bitrateAdjuster);
 
-    new NetworkBenchmark(1024 * 1024, new ConnectCheckerRtmp() {
-      @Override
-      public void onConnectionSuccessRtmp() {
-
-      }
-
-      @Override
-      public void onConnectionFailedRtmp(@NonNull String reason) {
-
-      }
-
-      @Override
-      public void onNewBitrateRtmp(long bitrate) {
-
-      }
-
-      @Override
-      public void onDisconnectRtmp() {
-
-      }
-
-      @Override
-      public void onAuthErrorRtmp() {
-
-      }
-
-      @Override
-      public void onAuthSuccessRtmp() {
-
-      }
-    }, new NetworkBenchmark.SpeedBenchmarkListener() {
+    new NetworkBenchmark(1024 * 1024 / 8, new ConnectCheckerRtmpAdapter() {}, new NetworkBenchmark.SpeedBenchmarkListener() {
       @Override
       public void onSpeedEstimated(double speedMbs) {
         Log.d("lol3", "estimated network speed: " + speedMbs);
       }
-    }).start("rtmp://rtmp-global.cloud.vimeo.com/live/86fa089a-4ec4-412b-8b67-79480c8447a8");
+    }).start("rtmp://rtmp-global.cloud.vimeo.com/live/c9bb6460-364b-439a-8db7-3d17acae234b");
   }
 
   @Override

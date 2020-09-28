@@ -5,10 +5,10 @@ import android.util.Log
 import com.github.faucamp.simplertmp.BenchmarkRtmpPublisher
 import kotlin.random.Random
 
-/** Estimate network speed by sending random bytes to given RTMP server
+/** Estimates network speed by sending random bytes to given RTMP server.
  * @param dataSizeBytes is the amount of data to be send
  * It is not recommended to send data less than 1Mb as the estimation
- * may not be accurate. Don't pass the @param dataSizeBytes too high to avoid OOM.
+ * may not be accurate. Don't pass the @param dataSizeBytes too big to avoid OOM.
  */
 class NetworkBenchmark(
         private val dataSizeBytes: Int,
@@ -24,9 +24,6 @@ class NetworkBenchmark(
     private var connected = false
     private val publisher = BenchmarkRtmpPublisher(connectCheckerRtmp)
     private var worker: Thread? = null
-    private val fakeData = ByteArray(dataSizeBytes).apply {
-        Random.nextBytes(this)
-    }
 
     fun start(rtmpUrl: String) {
         worker = Thread(Runnable {
@@ -41,17 +38,13 @@ class NetworkBenchmark(
     }
 
     private fun runBenchmark() {
-        val sampleDataSize = ByteArray(10 * 1024).apply {
+        val fakeData = ByteArray(dataSizeBytes).apply {
             Random.nextBytes(this)
         }
-        val iterations = fakeData.size / sampleDataSize.size
-        Log.d(TAG, "iterations: $iterations")
-
         val startTimeNs = System.nanoTime()
-        sendFakeData(ByteArray(dataSizeBytes).apply { Random.nextBytes(this) })
+        sendFakeData(fakeData)
         val sendTime = (System.nanoTime() - startTimeNs) / 1_000_000_000.0
         val speed: Double = fakeData.size / sendTime / 1024.0 / 1024.0 * 8.0
-
         Log.d(TAG, "speed: $speed")
         listener.onSpeedEstimated(speed)
     }
