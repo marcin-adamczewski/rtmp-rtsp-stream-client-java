@@ -84,6 +84,8 @@ import net.ossrs.rtmp.bitrateadjuster.BitrateAdjuster;
 import net.ossrs.rtmp.ConnectCheckerRtmp;
 import net.ossrs.rtmp.NetworkBenchmark;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * More documentation see:
  * {@link com.pedro.rtplibrary.base.Camera1Base}
@@ -141,12 +143,22 @@ public class OpenGlRtmpActivity extends AppCompatActivity
     });
     rtmpCamera1.setMuxerListener(bitrateAdjuster);
 
-    new NetworkBenchmark(1024 * 1024 / 8, new ConnectCheckerRtmpAdapter() {}, new NetworkBenchmark.SpeedBenchmarkListener() {
+    new NetworkBenchmark(1024 * 1024 / 4, 5, new ConnectCheckerRtmpAdapter() {}, new NetworkBenchmark.SpeedBenchmarkListener() {
+      @Override
+      public void onTimeout() {
+        Log.d("lol3", "Timeout");
+      }
+
       @Override
       public void onSpeedEstimated(double speedMbs) {
         Log.d("lol3", "estimated network speed: " + speedMbs);
       }
-    }).start("rtmp://rtmp-global.cloud.vimeo.com/live/c9bb6460-364b-439a-8db7-3d17acae234b");
+
+      @Override
+      public void onError(@NotNull Exception e) {
+
+      }
+    }).start("rtmp://rtmp-global.cloud.vimeo.com/live/92163bd0-a399-4bd7-91ad-3eeda67d5b14");
   }
 
   @Override
@@ -432,7 +444,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
           if (rtmpCamera1.isRecording()
               || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo(1280, 720, 24, 2 * 1024 * 1024, false, CameraHelper.getCameraOrientation(this))) {
             button.setText(R.string.stop_button);
-            rtmpCamera1.startStream("rtmp://rtmp-global.cloud.vimeo.com/live/c6a6c1dd-0bcf-402a-8aed-402492529144");
+            rtmpCamera1.startStream("rtmp://rtmp-global.cloud.vimeo.com/live/f475ff05-58f3-4bdb-928d-4ffd30c5e57d");
           } else {
             Toast.makeText(this, "Error preparing stream, This device cant do it",
                 Toast.LENGTH_SHORT).show();

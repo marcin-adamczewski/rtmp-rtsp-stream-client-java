@@ -1,5 +1,7 @@
 package net.ossrs.rtmp
 
+import android.os.Handler
+import android.os.Looper
 import android.os.Process
 import android.util.Log
 import com.github.faucamp.simplertmp.BenchmarkRtmpPublisher
@@ -12,29 +14,50 @@ import kotlin.random.Random
  */
 class NetworkBenchmark(
         private val dataSizeBytes: Int,
+        private val timeout: Int,
         private val connectCheckerRtmp: ConnectCheckerRtmp,
         val listener: SpeedBenchmarkListener
 ) {
 
     interface SpeedBenchmarkListener {
         fun onSpeedEstimated(speedMbs: Double)
+        fun onTimeout()
+        fun onError(e: Exception)
     }
 
     private val TAG = "NetoworkBenchmark"
     private var connected = false
     private val publisher = BenchmarkRtmpPublisher(connectCheckerRtmp)
     private var worker: Thread? = null
+    @Volatile private var stopped = false
 
     fun start(rtmpUrl: String) {
-        worker = Thread(Runnable {
-            Process.setThreadPriority(Process.THREAD_PRIORITY_MORE_FAVORABLE)
-            if (!connect(rtmpUrl)) {
-                return@Runnable
-            }
-            runBenchmark()
-            stop(connectCheckerRtmp)
-        })
-        worker?.start()
+        try {
+            worker = Thread(Runnable {
+                Process.setThreadPriority(Process.THREAD_PRIORITY_MORE_FAVORABLE)
+                if (!connect(rtmpUrl)) {
+                    return@Runnable
+                }
+                handleTimeout()
+                runBenchmark()
+                stop()
+            })
+            worker?.start()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error when running benchmark: $e")
+            listener.onError(e)
+        }
+    }
+
+    private fun handleTimeout() {
+        if (timeout > 0) {
+            Handler(Looper.getMainLooper()).postDelayed({
+                if (!stopped) {
+                    listener.onTimeout()
+                    stop()
+                }
+            }, timeout * 1000L)
+        }
     }
 
     private fun runBenchmark() {
@@ -46,7 +69,9 @@ class NetworkBenchmark(
         val sendTime = (System.nanoTime() - startTimeNs) / 1_000_000_000.0
         val speed: Double = fakeData.size / sendTime / 1024.0 / 1024.0 * 8.0
         Log.d(TAG, "speed: $speed")
-        listener.onSpeedEstimated(speed)
+        if (!stopped) {
+            listener.onSpeedEstimated(speed)
+        }
     }
 
     private fun sendFakeData(fakeData: ByteArray) {
@@ -63,10 +88,7 @@ class NetworkBenchmark(
     }
 
     fun stop() {
-        stop(connectCheckerRtmp)
-    }
-
-    private fun stop(connectCheckerRtmp: ConnectCheckerRtmp) {
+        if (stopped) return else stopped = true
         worker?.interrupt()
         try {
             worker?.join(100)
