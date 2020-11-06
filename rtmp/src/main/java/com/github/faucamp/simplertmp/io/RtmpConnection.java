@@ -153,7 +153,7 @@ public class RtmpConnection implements RtmpPublisher {
           socket.setSendBufferSize(sendBufferSize);
         }
         socket.connect(socketAddress, 5000);
-        Log.d("lol", "size: " + socket.getSendBufferSize());
+        Log.d("RtmpConnection", "Send buffer size: " + socket.getSendBufferSize());
       } else {
         socket = CreateSSLSocket.createSSlSocket(host, port);
         if (socket == null) throw new IOException("Socket creation failed");

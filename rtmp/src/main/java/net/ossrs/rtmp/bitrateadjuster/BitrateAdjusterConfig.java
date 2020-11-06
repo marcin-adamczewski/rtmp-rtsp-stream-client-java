@@ -5,14 +5,19 @@ import androidx.annotation.NonNull;
 public class BitrateAdjusterConfig {
 
     public static BitrateAdjusterConfig defaultConfig() {
-        return new BitrateAdjusterConfig(new DefaultBitrateForNetwork(), DEFAULT_TEST_DURATION_MS, DEFAULT_INTERVAL_DURATION_MS, DEFAULT_LOWERING_FRACTION);
+        return new BitrateAdjusterConfig(new DefaultBitrateForNetwork(), DEFAULT_TEST_DURATION_MS, DEFAULT_INTERVAL_DURATION_MS, DEFAULT_LOWERING_FRACTION, true);
     }
 
-    public BitrateAdjusterConfig(@NonNull BitrateForNetwork bitrateForNetwork, long testDurationMs, long testIntervalDurationMs, float loweringFraction) {
+    public BitrateAdjusterConfig(@NonNull BitrateForNetwork bitrateForNetwork,
+                                 long testDurationMs,
+                                 long testIntervalDurationMs,
+                                 float loweringFraction,
+                                 boolean useSystemUploadCalculation) {
         this.bitrateForNetwork = bitrateForNetwork;
         this.testDurationMs = testDurationMs;
         this.testIntervalDurationMs = testIntervalDurationMs;
         this.loweringFraction = loweringFraction;
+        this.useSystemUploadCalculation = useSystemUploadCalculation;
     }
 
     public interface BitrateForNetwork {
@@ -47,5 +52,6 @@ public class BitrateAdjusterConfig {
     public final long testDurationMs;
     public final long testIntervalDurationMs;
     public final float loweringFraction;
+    public final boolean useSystemUploadCalculation;
 
 }

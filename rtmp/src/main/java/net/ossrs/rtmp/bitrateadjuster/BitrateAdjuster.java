@@ -116,7 +116,7 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
         boolean isCongestion = bufferFill > 0.2f;
         if (isCongestion &&
                 (currentNetworkType == null || currentNetworkType != NetworkType.NO_CONNECTION) &&
-                isMinimumTimeBetweenCongestionBitrates()
+                isMinimumTimeBetweenCongestions()
         ) {
             // The initialBitrate helps us recover from congestion quicker.
             // Then, after the estimator is done the bitrate will be adjusted.
@@ -191,7 +191,7 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
     // give some time to send everything out from the buffer before congestion is gone.
     // That's why we want to wait MINIMUM_TIME_BETWEEN_CONGESTION_ESTIMATORS_MS before starting
     // a new estimator.
-    private boolean isMinimumTimeBetweenCongestionBitrates() {
+    private boolean isMinimumTimeBetweenCongestions() {
         return System.currentTimeMillis() > minimumTimeWhenNextEstimatorForCongestionCanBeStarted();
     }
 
@@ -207,7 +207,8 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
 
     private BitrateEstimator createEstimator(boolean isEndlessEstimation, boolean lowerEstimation) {
         return new BitrateEstimator(config.testDurationMs, config.testIntervalDurationMs,
-                isEndlessEstimation, lowerEstimation, adjustableLoweringFactor);
+                isEndlessEstimation, lowerEstimation, adjustableLoweringFactor,
+                config.useSystemUploadCalculation);
     }
 
     private int getDefaultBitrateForNetwork(NetworkType networkType) {

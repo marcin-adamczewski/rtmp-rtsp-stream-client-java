@@ -107,7 +107,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
   private SpriteGestureController spriteGestureController = new SpriteGestureController();
   private BitrateAdjuster bitrateAdjuster;
 
-  private final String url = "rtmp://rtmp-global.cloud.vimeo.com/live/a8dd30c1-f457-42eb-9455-102fe83cfde2";
+  private final String url = "rtmp://rtmp-global.cloud.vimeo.com/live/a26a7d29-f964-4d32-b3f2-673f41937047";
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -138,7 +138,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
     bitrateAdjuster = new BitrateAdjuster(this, null, new BitrateAdjuster.BitrateUpdater() {
       @Override
       public void onNewBitrate(long bitrate) {
-        Log.d("lol2", "setting new bitrate to: " + String.format("%.00f", bitrate / 1024.0 / 1024.0));
+        Log.d("lol2", "setting new bitrate to: " + String.format("%.2f", bitrate / 1024.0f / 1024.0f));
         rtmpCamera1.setVideoBitrateOnFly((int) bitrate);
       }
     });

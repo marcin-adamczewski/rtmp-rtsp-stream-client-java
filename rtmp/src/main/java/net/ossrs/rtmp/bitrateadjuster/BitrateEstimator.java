@@ -1,23 +1,28 @@
 package net.ossrs.rtmp.bitrateadjuster;
 
+import android.net.TrafficStats;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public class BitrateEstimator {
+    public static boolean SHOW_LOGS = false;
     private final static String TAG = "BitrateEstimator";
     private final int INITIAL_DELAY_MS = 1_000; // To not take the TCP slow-start into account
 
     private final long intervalDurationMs;
     private final boolean isEndlessEstimation;
     private final boolean lowerEstimation;
+    private final boolean useSystemUploadCalculation;
     private final float loweringFactor;
     private final long maxIntervals;
 
     private long uploadedBytesSoFar = 0L;
+    private long systemUploadedBytesOnIntervalStart = 0L;
     private long intervalStartNano = -1L;
     private int intervalNo = 1;
     private final List<Double> bitrates = new ArrayList<>();
@@ -27,11 +32,12 @@ public class BitrateEstimator {
 
     public BitrateEstimator(long testDurationMs, long intervalDurationMs,
                             boolean isEndlessEstimation, boolean lowerEstimation,
-                            float loweringFactor) {
+                            float loweringFactor, boolean useSystemUploadCalculation) {
         this.intervalDurationMs = intervalDurationMs;
         this.isEndlessEstimation = isEndlessEstimation;
         this.lowerEstimation = lowerEstimation;
         this.loweringFactor = loweringFactor;
+        this.useSystemUploadCalculation = useSystemUploadCalculation;
         maxIntervals = testDurationMs / intervalDurationMs;
     }
 
@@ -60,6 +66,7 @@ public class BitrateEstimator {
 
         if (intervalStartNano == -1) {
             intervalStartNano = System.nanoTime();
+            systemUploadedBytesOnIntervalStart = TrafficStats.getTotalTxBytes();
         }
     }
 
@@ -71,7 +78,7 @@ public class BitrateEstimator {
         uploadedBytesSoFar += sentFrameSize;
         long currentIntervalDurationMs = (System.nanoTime() - intervalStartNano) / 1000 / 1000;
         if (currentIntervalDurationMs > intervalDurationMs) {
-            estimateBitrateForInterval(uploadedBytesSoFar);
+            estimateBitrateForInterval();
             intervalNo++;
             resetInterval();
         }
@@ -106,12 +113,19 @@ public class BitrateEstimator {
         return !finished && !waitForInitialDelay;
     }
 
-    private void estimateBitrateForInterval(long uploadedBytes) {
-        long currentIntervalDurationMs = (System.nanoTime() - intervalStartNano) / 1000 / 1000;
-        double byteRate = uploadedBytes / (currentIntervalDurationMs / 1000.0);
-        if (byteRate > 0) {
-            bitrates.add(byteRate * 8);
-            //Log.d(TAG, "Added bitrate: " + byteRate * 8 / 1024.0 / 1024.0);
+    private void estimateBitrateForInterval() {
+        double currentIntervalDuration = (System.nanoTime() - intervalStartNano) / 1000.0 / 1000.0 / 1000.0;
+        double byteRateStream = uploadedBytesSoFar / currentIntervalDuration;
+        double byteRateSystem = (TrafficStats.getTotalTxBytes() - systemUploadedBytesOnIntervalStart) / currentIntervalDuration;
+        if (byteRateStream > 0) {
+            if (useSystemUploadCalculation) {
+                bitrates.add(byteRateSystem * 8);
+            } else {
+                bitrates.add(byteRateStream * 8);
+            }
+            if (SHOW_LOGS) {
+                Log.d(TAG, "Bitrate for interval.\nSystem: " + byteRateSystem * 8 / 1024.0 / 1024.0 + "\nStream: " + byteRateStream * 8 / 1024.0 / 1024.0);
+            }
         }
     }
 
@@ -126,7 +140,6 @@ public class BitrateEstimator {
         } else {
             medianBitrate = bitrates.get(bitrates.size() / 2);
         }
-        //Log.d(TAG, "Median bitrate is: " + medianBitrate / 1024.0 / 1024.0);
         return medianBitrate;
     }
 
