@@ -130,6 +130,10 @@ public class SrsFlvMuxer {
     publisher.setAuthorization(user, password);
   }
 
+  public void setSendBufferSize(int bufferSize) {
+    publisher.setSendBufferSize(bufferSize);
+  }
+
   public boolean isConnected() {
     return connected;
   }

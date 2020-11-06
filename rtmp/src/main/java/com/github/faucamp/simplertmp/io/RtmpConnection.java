@@ -79,6 +79,7 @@ public class RtmpConnection implements RtmpPublisher {
   private boolean onAuth = false;
   private String netConnectionDescription;
   private BitrateManager bitrateManager;
+  private int sendBufferSize;
 
   public RtmpConnection(ConnectCheckerRtmp connectCheckerRtmp) {
     this.connectCheckerRtmp = connectCheckerRtmp;
@@ -148,8 +149,11 @@ public class RtmpConnection implements RtmpPublisher {
       if (!tlsEnabled) {
         socket = new Socket();
         SocketAddress socketAddress = new InetSocketAddress(host, port);
-        socket.setSendBufferSize(10 * 1024); // This buffer has to be low, otherwise we won't be able to estimate real upload speed and then adjust bitrate in BitrateAdjuster and NetworkBenchmark.
+        if (sendBufferSize > 0) {
+          socket.setSendBufferSize(sendBufferSize);
+        }
         socket.connect(socketAddress, 5000);
+        Log.d("lol", "size: " + socket.getSendBufferSize());
       } else {
         socket = CreateSSLSocket.createSSlSocket(host, port);
         if (socket == null) throw new IOException("Socket creation failed");
@@ -541,8 +545,6 @@ public class RtmpConnection implements RtmpPublisher {
               Log.d(TAG, "handleRxPacketLoop(): Send acknowledgement window size: "
                   + acknowledgementWindowsize);
               sendRtmpPacket(new WindowAckSize(acknowledgementWindowsize, chunkStreamInfo));
-              // Set socket option. This line could produce bps calculation problems.
-              //socket.setSendBufferSize(acknowledgementWindowsize);
               break;
             case COMMAND_AMF0:
               handleRxInvoke((Command) rtmpPacket);
@@ -707,5 +709,10 @@ public class RtmpConnection implements RtmpPublisher {
   public void setAuthorization(String user, String password) {
     this.user = user;
     this.password = password;
+  }
+
+  @Override
+  public void setSendBufferSize(int bufferSize) {
+    sendBufferSize = bufferSize;
   }
 }

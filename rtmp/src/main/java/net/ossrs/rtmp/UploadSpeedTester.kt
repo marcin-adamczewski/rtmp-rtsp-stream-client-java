@@ -4,30 +4,32 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Process
 import android.util.Log
-import com.github.faucamp.simplertmp.BenchmarkRtmpPublisher
-import kotlin.random.Random
+import com.github.faucamp.simplertmp.SpeedTestRtmpPublisher
 
-/** Estimates network speed by sending random bytes to given RTMP server.
+/** Estimates network upload speed by sending random bytes to given RTMP server.
  * @param dataSizeBytes is the amount of data to be send
- * It is not recommended to send data less than 1Mb as the estimation
- * may not be accurate. Don't pass the @param dataSizeBytes too big to avoid OOM.
+ * It is not recommended to send data less than 2Mb as the estimation
+ * may not be accurate.
  */
-class NetworkBenchmark(
+class UploadSpeedTester(
         private val dataSizeBytes: Int,
         private val timeout: Int,
         private val connectCheckerRtmp: ConnectCheckerRtmp,
-        val listener: SpeedBenchmarkListener
+        val listener: SpeedTesterListener
 ) {
 
-    interface SpeedBenchmarkListener {
+    interface SpeedTesterListener {
         fun onSpeedEstimated(speedMbs: Double)
         fun onTimeout()
         fun onError(e: Exception)
     }
 
-    private val TAG = "NetoworkBenchmark"
+    private val TAG = "UploadSpeedTester"
     private var connected = false
-    private val publisher = BenchmarkRtmpPublisher(connectCheckerRtmp)
+    private val publisher = SpeedTestRtmpPublisher(connectCheckerRtmp).apply {
+        // We have to set lower buffer size, otherwise upload speed estimation may be inaccurate.
+        setSendBufferSize(40 * 1024)
+    }
     private var worker: Thread? = null
     @Volatile private var stopped = false
 
@@ -39,12 +41,12 @@ class NetworkBenchmark(
                     return@Runnable
                 }
                 handleTimeout()
-                runBenchmark()
+                runTest()
                 stop()
             })
             worker?.start()
         } catch (e: Exception) {
-            Log.e(TAG, "Error when running benchmark: $e")
+            Log.e(TAG, "Error when running test: $e")
             listener.onError(e)
         }
     }
@@ -60,22 +62,28 @@ class NetworkBenchmark(
         }
     }
 
-    private fun runBenchmark() {
-        val fakeData = ByteArray(dataSizeBytes).apply {
-            Random.nextBytes(this)
-        }
+    private fun runTest() {
         val startTimeNs = System.nanoTime()
-        sendFakeData(fakeData)
+        sendFakeDataInChunks()
         val sendTime = (System.nanoTime() - startTimeNs) / 1_000_000_000.0
-        val speed: Double = fakeData.size / sendTime / 1024.0 / 1024.0 * 8.0
-        Log.d(TAG, "speed: $speed")
+        val speed: Double = dataSizeBytes / sendTime / 1024.0 / 1024.0 * 8.0
         if (!stopped) {
             listener.onSpeedEstimated(speed)
         }
     }
 
-    private fun sendFakeData(fakeData: ByteArray) {
-        publisher.publishFakeVideoData(fakeData)
+    // The server may not accept big chunks so we need to split it to smaller ones.
+    private fun sendFakeDataInChunks() {
+        val partSizeBytes = 200 * 1024
+        val parts = dataSizeBytes / partSizeBytes
+        val lastPartBytes = dataSizeBytes - (parts * partSizeBytes)
+
+        repeat(parts) {
+            publisher.publishFakeVideoData(ByteArray(partSizeBytes))
+        }
+        if (lastPartBytes > 0) {
+            publisher.publishFakeVideoData(ByteArray(lastPartBytes))
+        }
     }
 
     private fun connect(serverUrl: String): Boolean {

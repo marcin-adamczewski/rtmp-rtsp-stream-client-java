@@ -50,4 +50,9 @@ public class DefaultRtmpPublisher implements RtmpPublisher {
   public void setAuthorization(String user, String password) {
     rtmpConnection.setAuthorization(user, password);
   }
+
+  @Override
+  public void setSendBufferSize(int bufferSize) {
+    rtmpConnection.setSendBufferSize(bufferSize);
+  }
 }

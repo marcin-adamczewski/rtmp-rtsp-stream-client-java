@@ -121,6 +121,10 @@ public class RtmpCamera2 extends Camera2Base {
     srsFlvMuxer.setAuthorization(user, password);
   }
 
+  public void setSendBufferSize(int bufferSize) {
+    srsFlvMuxer.setSendBufferSize(bufferSize);
+  }
+
   /**
    * Some Livestream hosts use Akamai auth that requires RTMP packets to be sent with increasing timestamp order regardless of packet type.
    * Necessary with Servers like Dacast.

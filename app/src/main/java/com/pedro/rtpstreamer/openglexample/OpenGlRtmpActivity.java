@@ -19,7 +19,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import com.pedro.encoder.input.gl.SpriteGestureController;
@@ -82,7 +81,7 @@ import net.ossrs.rtmp.ConnectCheckerRtmpAdapter;
 import net.ossrs.rtmp.bitrateadjuster.BitrateAdjuster;
 
 import net.ossrs.rtmp.ConnectCheckerRtmp;
-import net.ossrs.rtmp.NetworkBenchmark;
+import net.ossrs.rtmp.UploadSpeedTester;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -107,6 +106,8 @@ public class OpenGlRtmpActivity extends AppCompatActivity
   private OpenGlView openGlView;
   private SpriteGestureController spriteGestureController = new SpriteGestureController();
   private BitrateAdjuster bitrateAdjuster;
+
+  private final String url = "rtmp://rtmp-global.cloud.vimeo.com/live/a8dd30c1-f457-42eb-9455-102fe83cfde2";
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -143,7 +144,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
     });
     rtmpCamera1.setMuxerListener(bitrateAdjuster);
 
-    new NetworkBenchmark(1024 * 1024 / 4, 5, new ConnectCheckerRtmpAdapter() {}, new NetworkBenchmark.SpeedBenchmarkListener() {
+   new UploadSpeedTester(2 * 1024 * 1024, 10, new ConnectCheckerRtmpAdapter() {}, new UploadSpeedTester.SpeedTesterListener() {
       @Override
       public void onTimeout() {
         Log.d("lol3", "Timeout");
@@ -158,7 +159,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
       public void onError(@NotNull Exception e) {
 
       }
-    }).start("rtmp://rtmp-global.cloud.vimeo.com/live/92163bd0-a399-4bd7-91ad-3eeda67d5b14");
+    }).start(url);
   }
 
   @Override
@@ -444,7 +445,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
           if (rtmpCamera1.isRecording()
               || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo(1280, 720, 24, 2 * 1024 * 1024, false, CameraHelper.getCameraOrientation(this))) {
             button.setText(R.string.stop_button);
-            rtmpCamera1.startStream("rtmp://rtmp-global.cloud.vimeo.com/live/f475ff05-58f3-4bdb-928d-4ffd30c5e57d");
+            rtmpCamera1.startStream(url);
           } else {
             Toast.makeText(this, "Error preparing stream, This device cant do it",
                 Toast.LENGTH_SHORT).show();

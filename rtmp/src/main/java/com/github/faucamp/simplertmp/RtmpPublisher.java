@@ -59,4 +59,11 @@ public interface RtmpPublisher {
   void setVideoResolution(int width, int height);
 
   void setAuthorization(String user, String password);
+
+  /** Have to be called before connecting to a stream.
+   * @param bufferSize This value can't be too low, otherwise it will cause congestion on some devices.
+   * It also can't be too large, otherwise bitrate estimation may not work well if it is based on sent bytes.
+   * You probably don't want go lower than 200kB.
+   */
+  void setSendBufferSize(int bufferSize);
 }
