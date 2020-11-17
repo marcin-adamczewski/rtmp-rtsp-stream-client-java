@@ -15,6 +15,7 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
 
     public interface BitrateUpdater {
         void onNewBitrate(long bitrate);
+        void onCurrentBitrate(long bitrate);
     }
 
     private static final String TAG = "BitrateAdjuster";
@@ -32,7 +33,7 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
     private float adjustableLoweringFactor;
     private long previousStartTimeMsOfEstimationForCongestion;
 
-    public BitrateAdjuster(@NonNull Context context, @Nullable BitrateAdjusterConfig config, @NonNull BitrateUpdater bitrateUpdater) {
+    public BitrateAdjuster(@NonNull Context context, @Nullable BitrateAdjusterConfig config, @NonNull final BitrateUpdater bitrateUpdater) {
         this.bitrateUpdater = bitrateUpdater;
         this.context = context;
         this.config = config == null ? BitrateAdjusterConfig.defaultConfig() : config;
@@ -42,6 +43,7 @@ public class BitrateAdjuster implements SrsFlvMuxer.MuxerEventsListener {
             public void onResult(double medianBitrate) {
                 Log.d(TAG, "current estimated bitrate: " + medianBitrate / 1024.0 / 1024.0);
                 currentEstimatedBitrate = medianBitrate;
+                bitrateUpdater.onCurrentBitrate((long) medianBitrate);
             }
         };
         endlessEstimator.start();

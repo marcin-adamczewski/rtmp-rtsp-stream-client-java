@@ -141,6 +141,11 @@ public class OpenGlRtmpActivity extends AppCompatActivity
         Log.d("lol2", "setting new bitrate to: " + String.format("%.2f", bitrate / 1024.0f / 1024.0f));
         rtmpCamera1.setVideoBitrateOnFly((int) bitrate);
       }
+
+      @Override
+      public void onCurrentBitrate(long bitrate) {
+        Log.d("lol2", "transitory bitrate " + String.format("%.2f", bitrate / 1024.0f / 1024.0f));
+      }
     });
     rtmpCamera1.setMuxerListener(bitrateAdjuster);
 
