@@ -217,11 +217,6 @@ public class SrsFlvMuxer {
       connectChecker.onDisconnectRtmp();
     }
 
-    resetSentAudioFrames();
-    resetSentVideoFrames();
-    resetDroppedAudioFrames();
-    resetDroppedVideoFrames();
-
     Log.i(TAG, "worker: disconnect ok.");
   }
 
@@ -290,6 +285,7 @@ public class SrsFlvMuxer {
    * start to the remote SRS for remux.
    */
   public void start(final String rtmpUrl) {
+    clear();
     startTs = System.nanoTime() / 1000;
     worker = new Thread(new Runnable() {
       @Override
@@ -322,6 +318,15 @@ public class SrsFlvMuxer {
 
   public void stop() {
     stop(connectCheckerRtmp);
+  }
+
+  // Call it before start() instead after stopped so the asynchronous callback listeners
+  // have an option to grab dropped frames after disconnection.
+  private void clear() {
+    resetSentAudioFrames();
+    resetSentVideoFrames();
+    resetDroppedAudioFrames();
+    resetDroppedVideoFrames();
   }
 
   /**
