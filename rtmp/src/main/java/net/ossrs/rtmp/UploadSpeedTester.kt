@@ -33,10 +33,11 @@ class UploadSpeedTester(
     private var worker: Thread? = null
     @Volatile private var stopped = false
 
-    fun start(rtmpUrl: String) {
+    fun start(rtmpUrl: String, userName: String?, password: String?) {
         try {
             worker = Thread(Runnable {
                 Process.setThreadPriority(Process.THREAD_PRIORITY_MORE_FAVORABLE)
+                publisher.setAuthorization(userName, password)
                 if (!connect(rtmpUrl)) {
                     return@Runnable
                 }
