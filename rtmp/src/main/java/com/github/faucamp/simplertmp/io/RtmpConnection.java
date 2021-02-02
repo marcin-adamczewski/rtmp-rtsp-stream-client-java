@@ -429,8 +429,6 @@ public class RtmpConnection implements RtmpPublisher {
     transactionIdCounter = 0;
     socket = null;
     rtmpSessionInfo = null;
-    user = null;
-    password = null;
     salt = null;
     challenge = null;
     opaque = null;
