@@ -35,6 +35,7 @@ import com.pedro.rtplibrary.rtmp.RtmpCamera1;
 import com.pedro.rtpstreamer.R;
 
 import net.ossrs.rtmp.ConnectCheckerRtmp;
+import net.ossrs.rtmp.ConnectionParams;
 
 import java.io.File;
 import java.io.IOException;
@@ -213,11 +214,8 @@ public class RtmpActivity extends AppCompatActivity
           bStartStop.setText(getResources().getString(R.string.stop_button));
           String user = etWowzaUser.getText().toString();
           String password = etWowzaPassword.getText().toString();
-          if (!user.isEmpty() && !password.isEmpty()) {
-            rtmpCamera1.setAuthorization(user, password);
-          }
           if (rtmpCamera1.isRecording() || prepareEncoders()) {
-            rtmpCamera1.startStream(etUrl.getText().toString());
+            rtmpCamera1.startStream(new ConnectionParams(etUrl.getText().toString(), user, password));
           } else {
             //If you see this all time when you start stream,
             //it is because your encoder device dont support the configuration

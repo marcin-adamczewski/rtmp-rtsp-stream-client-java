@@ -32,6 +32,9 @@ import com.pedro.rtplibrary.rtsp.RtspCamera1;
 import com.pedro.rtpstreamer.R;
 import com.pedro.rtsp.rtsp.Protocol;
 import com.pedro.rtsp.utils.ConnectCheckerRtsp;
+
+import net.ossrs.rtmp.ConnectionParams;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -221,7 +224,7 @@ public class RtspActivity extends AppCompatActivity
             rtspCamera1.setAuthorization(user, password);
           }
           if (rtspCamera1.isRecording() || prepareEncoders()) {
-            rtspCamera1.startStream(etUrl.getText().toString());
+            rtspCamera1.startStream(ConnectionParams.simple(etUrl.getText().toString()));
           } else {
             //If you see this all time when you start stream,
             //it is because your encoder device dont support the configuration

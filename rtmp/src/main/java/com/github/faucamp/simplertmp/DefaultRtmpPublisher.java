@@ -2,6 +2,7 @@ package com.github.faucamp.simplertmp;
 
 import com.github.faucamp.simplertmp.io.RtmpConnection;
 import net.ossrs.rtmp.ConnectCheckerRtmp;
+import net.ossrs.rtmp.ConnectionParams;
 
 /**
  * Srs implementation of an RTMP publisher
@@ -17,8 +18,8 @@ public class DefaultRtmpPublisher implements RtmpPublisher {
   }
 
   @Override
-  public boolean connect(String url) {
-    return rtmpConnection.connect(url);
+  public boolean connect(ConnectionParams params) {
+    return rtmpConnection.connect(params);
   }
 
   @Override
@@ -44,11 +45,6 @@ public class DefaultRtmpPublisher implements RtmpPublisher {
   @Override
   public void setVideoResolution(int width, int height) {
     rtmpConnection.setVideoResolution(width, height);
-  }
-
-  @Override
-  public void setAuthorization(String user, String password) {
-    rtmpConnection.setAuthorization(user, password);
   }
 
   @Override

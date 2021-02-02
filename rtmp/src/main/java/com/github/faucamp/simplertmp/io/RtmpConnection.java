@@ -31,6 +31,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.ossrs.rtmp.BitrateManager;
 import net.ossrs.rtmp.ConnectCheckerRtmp;
+import net.ossrs.rtmp.ConnectionParams;
 import net.ossrs.rtmp.CreateSSLSocket;
 
 /**
@@ -70,8 +71,6 @@ public class RtmpConnection implements RtmpPublisher {
   //for secure transport
   private boolean tlsEnabled;
   //for auth
-  private String user = null;
-  private String password = null;
   private String salt = null;
   private String challenge = null;
   private String opaque = null;
@@ -79,6 +78,8 @@ public class RtmpConnection implements RtmpPublisher {
   private String netConnectionDescription;
   private final BitrateManager bitrateManager;
   private boolean isEnableLogs = true;
+
+  private ConnectionParams connectionParams;
 
   public RtmpConnection(ConnectCheckerRtmp connectCheckerRtmp) {
     this.connectCheckerRtmp = connectCheckerRtmp;
@@ -122,13 +123,14 @@ public class RtmpConnection implements RtmpPublisher {
   }
 
   @Override
-  public boolean connect(String url) {
-    if (url == null) {
+  public boolean connect(ConnectionParams params) {
+    connectionParams = params;
+    if (params.getUrl() == null) {
       connectCheckerRtmp.onConnectionFailedRtmp(
           "Endpoint malformed, should be: rtmp://ip:port/appname/streamname");
       return false;
     }
-    Matcher rtmpMatcher = rtmpUrlPattern.matcher(url);
+    Matcher rtmpMatcher = rtmpUrlPattern.matcher(params.getUrl());
     if (rtmpMatcher.matches()) {
       tlsEnabled = rtmpMatcher.group(0).startsWith("rtmps");
     } else {
@@ -196,8 +198,8 @@ public class RtmpConnection implements RtmpPublisher {
       return false;
     }
 
-    if (user != null && password != null) {
-      sendConnect("?authmod=adobe&user=" + user);
+    if (connectionParams.getUser() != null && connectionParams.getPassword() != null) {
+      sendConnect("?authmod=adobe&user=" + connectionParams.getUser());
     } else {
       sendConnect("");
     }
@@ -436,8 +438,7 @@ public class RtmpConnection implements RtmpPublisher {
     currentStreamId = 0;
     transactionIdCounter = 0;
     socket = null;
-    user = null;
-    password = null;
+    connectionParams = null;
     salt = null;
     challenge = null;
     opaque = null;
@@ -592,8 +593,8 @@ public class RtmpConnection implements RtmpPublisher {
             synchronized (connectingLock) {
               connectingLock.notifyAll();
             }
-          } else if (user != null
-              && password != null
+          } else if (connectionParams.getUser() != null
+              && connectionParams.getPassword() != null
               && description.contains("challenge=")
               && description.contains("salt=")) {
             onAuth = true;
@@ -623,8 +624,8 @@ public class RtmpConnection implements RtmpPublisher {
               }
             });
             rxPacketHandler.start();
-            sendConnect(getAuthUserResult(user, password, salt, challenge, opaque));
-          } else if (description.contains("code=403") && user == null || password == null) {
+            sendConnect(getAuthUserResult(connectionParams.getUser(), connectionParams.getPassword(), salt, challenge, opaque));
+          } else if (description.contains("code=403") && connectionParams.getUser() == null || connectionParams.getPassword() == null) {
             connectCheckerRtmp.onAuthErrorRtmp();
             connected = false;
             synchronized (connectingLock) {
@@ -728,12 +729,6 @@ public class RtmpConnection implements RtmpPublisher {
   public void setVideoResolution(int width, int height) {
     videoWidth = width;
     videoHeight = height;
-  }
-
-  @Override
-  public void setAuthorization(String user, String password) {
-    this.user = user;
-    this.password = password;
   }
 
   public void setLogs(boolean enable) {

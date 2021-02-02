@@ -69,7 +69,7 @@ public class SrsFlvMuxer {
   private int sampleRate = 0;
   private boolean isPpsSpsSend = false;
   private byte profileIop = ProfileIop.BASELINE;
-  private String url;
+  private ConnectionParams connectionParams;
   //re connection
   private boolean doingRetry;
   private int numRetry;
@@ -116,10 +116,6 @@ public class SrsFlvMuxer {
 
   public void forceAkamaiTs(boolean enabled) {
     akamaiTs = enabled;
-  }
-
-  public void setAuthorization(String user, String password) {
-    publisher.setAuthorization(user, password);
   }
 
   public boolean isConnected() {
@@ -230,17 +226,17 @@ public class SrsFlvMuxer {
     runnable = new Runnable() {
       @Override
       public void run() {
-        start(url, true);
+        start(connectionParams, true);
       }
     };
     handler.postDelayed(runnable, delay);
   }
 
-  private boolean connect(String url) {
-    this.url = url;
+  private boolean connect(ConnectionParams params) {
+    this.connectionParams = params;
     if (!connected) {
-      Log.i(TAG, String.format("worker: connecting to RTMP server by url=%s\n", url));
-      if (publisher.connect(url)) {
+      Log.i(TAG, String.format("worker: connecting to RTMP server by url=%s\n", params.getUrl()));
+      if (publisher.connect(params)) {
         connected = publisher.publish("live");
       }
     }
@@ -268,21 +264,21 @@ public class SrsFlvMuxer {
     }
   }
 
-  public void start(final String rtmpUrl) {
-    start(rtmpUrl, false);
+  public void start(final ConnectionParams ConnectionParams) {
+    start(ConnectionParams, false);
   }
 
   /**
    * start to the remote SRS for remux.
    */
-  public void start(final String rtmpUrl, final boolean isRetry) {
+  public void start(final ConnectionParams connectionParams, final boolean isRetry) {
     if (!isRetry) doingRetry = true;
     startTs = System.nanoTime() / 1000;
     worker = new Thread(new Runnable() {
       @Override
       public void run() {
         android.os.Process.setThreadPriority(Process.THREAD_PRIORITY_MORE_FAVORABLE);
-        if (!connect(rtmpUrl)) {
+        if (!connect(connectionParams)) {
           return;
         }
         if (isRetry) flv.retry();

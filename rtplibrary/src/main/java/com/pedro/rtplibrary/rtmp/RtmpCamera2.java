@@ -12,6 +12,7 @@ import com.pedro.rtplibrary.base.Camera2Base;
 import com.pedro.rtplibrary.view.LightOpenGlView;
 import com.pedro.rtplibrary.view.OpenGlView;
 import net.ossrs.rtmp.ConnectCheckerRtmp;
+import net.ossrs.rtmp.ConnectionParams;
 import net.ossrs.rtmp.SrsFlvMuxer;
 
 import java.nio.ByteBuffer;
@@ -123,11 +124,6 @@ public class RtmpCamera2 extends Camera2Base {
     srsFlvMuxer.resetDroppedVideoFrames();
   }
 
-  @Override
-  public void setAuthorization(String user, String password) {
-    srsFlvMuxer.setAuthorization(user, password);
-  }
-
   /**
    * Some Livestream hosts use Akamai auth that requires RTMP packets to be sent with increasing
    * timestamp order regardless of packet type.
@@ -146,13 +142,13 @@ public class RtmpCamera2 extends Camera2Base {
   }
 
   @Override
-  protected void startStreamRtp(String url) {
+  protected void startStreamRtp(ConnectionParams params) {
     if (videoEncoder.getRotation() == 90 || videoEncoder.getRotation() == 270) {
       srsFlvMuxer.setVideoResolution(videoEncoder.getHeight(), videoEncoder.getWidth());
     } else {
       srsFlvMuxer.setVideoResolution(videoEncoder.getWidth(), videoEncoder.getHeight());
     }
-    srsFlvMuxer.start(url);
+    srsFlvMuxer.start(params);
   }
 
   @Override

@@ -35,6 +35,9 @@ import com.pedro.rtplibrary.view.GlInterface;
 import com.pedro.rtplibrary.view.LightOpenGlView;
 import com.pedro.rtplibrary.view.OffScreenGlThread;
 import com.pedro.rtplibrary.view.OpenGlView;
+
+import net.ossrs.rtmp.ConnectionParams;
+
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -203,14 +206,6 @@ public abstract class Camera1Base
   public boolean isAutoFocusEnabled() {
     return cameraManager.isAutoFocusEnabled();
   }
-
-  /**
-   * Basic auth developed to work with Wowza. No tested with other server
-   *
-   * @param user auth.
-   * @param password auth.
-   */
-  public abstract void setAuthorization(String user, String password);
 
   /**
    * Call this method before use @startStream. If not you will do a stream without video. NOTE:
@@ -506,26 +501,26 @@ public abstract class Camera1Base
     cameraManager.setZoom(event);
   }
 
-  protected abstract void startStreamRtp(String url);
+  protected abstract void startStreamRtp(ConnectionParams params);
 
   /**
    * Need be called after @prepareVideo or/and @prepareAudio. This method override resolution of
    *
-   * @param url of the stream like: protocol://ip:port/application/streamName
+   * @param params contains of the stream like: protocol://ip:port/application/streamName
    *
    * RTSP: rtsp://192.168.1.1:1935/live/pedroSG94 RTSPS: rtsps://192.168.1.1:1935/live/pedroSG94
    * RTMP: rtmp://192.168.1.1:1935/live/pedroSG94 RTMPS: rtmps://192.168.1.1:1935/live/pedroSG94
    * @startPreview to resolution seated in @prepareVideo. If you never startPreview this method
    * startPreview for you to resolution seated in @prepareVideo.
    */
-  public void startStream(String url) {
+  public void startStream(ConnectionParams params) {
     streaming = true;
     if (!recordController.isRunning()) {
       startEncoders();
     } else {
       resetVideoEncoder();
     }
-    startStreamRtp(url);
+    startStreamRtp(params);
     onPreview = true;
   }
 

@@ -1,5 +1,7 @@
 package com.github.faucamp.simplertmp;
 
+import net.ossrs.rtmp.ConnectionParams;
+
 /**
  * Simple RTMP publisher, using vanilla Java networking (no NIO)
  * This was created primarily to address a NIO bug in Android 2.2 when
@@ -12,10 +14,10 @@ public interface RtmpPublisher {
   /**
    * Issues an RTMP "connect" command and wait for the response.
    *
-   * @param url specify the RTMP url
+   * @param params contains url that specify the RTMP url
    * @return If succeeded return true else return false
    */
-  boolean connect(String url);
+  boolean connect(ConnectionParams params);
 
   /**
    * Issues an RTMP "publish" command and write the media content stream packets (audio and video).
@@ -57,8 +59,6 @@ public interface RtmpPublisher {
    * @param height video height
    */
   void setVideoResolution(int width, int height);
-
-  void setAuthorization(String user, String password);
 
   void setLogs(boolean enable);
 }

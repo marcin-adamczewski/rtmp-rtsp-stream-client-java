@@ -33,6 +33,8 @@ import com.pedro.rtplibrary.util.RecordController;
 import com.pedro.rtplibrary.view.GlInterface;
 import com.pedro.rtplibrary.view.OffScreenGlThread;
 
+import net.ossrs.rtmp.ConnectionParams;
+
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -119,14 +121,6 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
   public void setFpsListener(FpsListener.Callback callback) {
     fpsListener.setCallback(callback);
   }
-
-  /**
-   * Basic auth developed to work with Wowza. No tested with other server
-   *
-   * @param user auth.
-   * @param password auth.
-   */
-  public abstract void setAuthorization(String user, String password);
 
   /**
    * Call this method before use @startStream. If not you will do a stream without video.
@@ -323,7 +317,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
     if (!streaming) stopStream();
   }
 
-  protected abstract void startStreamRtp(String url);
+  protected abstract void startStreamRtp(ConnectionParams params);
 
   /**
    * Create Intent used to init screen capture with startActivityForResult.
@@ -342,7 +336,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
   /**
    * Need be called after @prepareVideo or/and @prepareAudio.
    *
-   * @param url of the stream like:
+   * @param params contains url of the stream like:
    * protocol://ip:port/application/streamName
    *
    * RTSP: rtsp://192.168.1.1:1935/live/pedroSG94
@@ -350,14 +344,14 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
    * RTMP: rtmp://192.168.1.1:1935/live/pedroSG94
    * RTMPS: rtmps://192.168.1.1:1935/live/pedroSG94
    */
-  public void startStream(String url) {
+  public void startStream(ConnectionParams params) {
     streaming = true;
     if (!recordController.isRunning()) {
       startEncoders(resultCode, data);
     } else {
       resetVideoEncoder();
     }
-    startStreamRtp(url);
+    startStreamRtp(params);
   }
 
   private void startEncoders(int resultCode, Intent data) {

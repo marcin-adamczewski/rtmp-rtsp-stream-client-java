@@ -106,7 +106,7 @@ class RtspClient(private val connectCheckerRtsp: ConnectCheckerRtsp) {
   }
 
   @JvmOverloads
-  fun connect(url: String?, isRetry: Boolean = false) {
+  fun connect(connParams, isRetry: Boolean = false) {
     if (!isRetry) doingRetry = true
     if (url == null) {
       isStreaming = false

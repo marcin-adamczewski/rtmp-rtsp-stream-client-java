@@ -17,6 +17,8 @@ import com.pedro.encoder.input.audio.MicrophoneManagerManual;
 import com.pedro.encoder.input.audio.MicrophoneMode;
 import com.pedro.rtplibrary.util.RecordController;
 
+import net.ossrs.rtmp.ConnectionParams;
+
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -65,14 +67,6 @@ public abstract class OnlyAudioBase implements GetAacData, GetMicrophoneData {
   public void setCustomAudioEffect(CustomAudioEffect customAudioEffect) {
     microphoneManager.setCustomAudioEffect(customAudioEffect);
   }
-
-  /**
-   * Basic auth developed to work with Wowza. No tested with other server
-   *
-   * @param user auth.
-   * @param password auth.
-   */
-  public abstract void setAuthorization(String user, String password);
 
   protected abstract void prepareAudioRtp(boolean isStereo, int sampleRate);
 
@@ -161,12 +155,12 @@ public abstract class OnlyAudioBase implements GetAacData, GetMicrophoneData {
     if (!streaming) stopStream();
   }
 
-  protected abstract void startStreamRtp(String url);
+  protected abstract void startStreamRtp(ConnectionParams params);
 
   /**
    * Need be called after @prepareVideo or/and @prepareAudio.
    *
-   * @param url of the stream like:
+   * @param params contains url of the stream like:
    * protocol://ip:port/application/streamName
    *
    * RTSP: rtsp://192.168.1.1:1935/live/pedroSG94
@@ -174,12 +168,12 @@ public abstract class OnlyAudioBase implements GetAacData, GetMicrophoneData {
    * RTMP: rtmp://192.168.1.1:1935/live/pedroSG94
    * RTMPS: rtmps://192.168.1.1:1935/live/pedroSG94
    */
-  public void startStream(String url) {
+  public void startStream(ConnectionParams params) {
     streaming = true;
     if (!recordController.isRunning()) {
       startEncoders();
     }
-    startStreamRtp(url);
+    startStreamRtp(params);
   }
 
   /**

@@ -17,6 +17,9 @@ import com.pedro.rtpstreamer.R;
 import com.pedro.rtplibrary.rtsp.RtspCamera2;
 import com.pedro.rtplibrary.view.AutoFitTextureView;
 import com.pedro.rtsp.utils.ConnectCheckerRtsp;
+
+import net.ossrs.rtmp.ConnectionParams;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -127,7 +130,7 @@ public class TextureModeRtspActivity extends AppCompatActivity
           if (rtspCamera2.isRecording()
               || rtspCamera2.prepareAudio() && rtspCamera2.prepareVideo()) {
             button.setText(R.string.stop_button);
-            rtspCamera2.startStream(etUrl.getText().toString());
+            rtspCamera2.startStream(ConnectionParams.simple(etUrl.getText().toString()));
           } else {
             Toast.makeText(this, "Error preparing stream, This device cant do it",
                 Toast.LENGTH_SHORT).show();

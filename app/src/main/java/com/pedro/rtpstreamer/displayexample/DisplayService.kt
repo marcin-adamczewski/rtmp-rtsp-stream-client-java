@@ -16,6 +16,7 @@ import com.pedro.rtplibrary.rtmp.RtmpDisplay
 import com.pedro.rtplibrary.rtsp.RtspDisplay
 import com.pedro.rtpstreamer.R
 import com.pedro.rtpstreamer.backgroundexample.ConnectCheckerRtp
+import net.ossrs.rtmp.ConnectionParams
 
 
 /**
@@ -164,7 +165,7 @@ class DisplayService : Service() {
   private fun startStreamRtp(endpoint: String) {
     if (!displayBase!!.isStreaming) {
       if (displayBase!!.prepareVideo() && displayBase!!.prepareAudio()) {
-        displayBase!!.startStream(endpoint)
+        displayBase!!.startStream(ConnectionParams.simple(endpoint))
       }
     } else {
       showNotification("You are already streaming :(")

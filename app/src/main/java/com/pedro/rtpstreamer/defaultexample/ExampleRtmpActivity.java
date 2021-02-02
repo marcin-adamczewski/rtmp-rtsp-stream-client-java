@@ -20,6 +20,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import net.ossrs.rtmp.ConnectCheckerRtmp;
+import net.ossrs.rtmp.ConnectionParams;
 
 /**
  * More documentation see:
@@ -128,7 +129,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
           if (rtmpCamera1.isRecording()
               || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo()) {
             button.setText(R.string.stop_button);
-            rtmpCamera1.startStream(etUrl.getText().toString());
+            rtmpCamera1.startStream(ConnectionParams.simple(etUrl.getText().toString()));
           } else {
             Toast.makeText(this, "Error preparing stream, This device cant do it",
                 Toast.LENGTH_SHORT).show();

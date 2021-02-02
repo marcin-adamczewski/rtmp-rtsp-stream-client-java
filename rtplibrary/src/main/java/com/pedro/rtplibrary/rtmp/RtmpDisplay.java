@@ -8,6 +8,7 @@ import androidx.annotation.RequiresApi;
 import com.pedro.rtplibrary.base.DisplayBase;
 
 import net.ossrs.rtmp.ConnectCheckerRtmp;
+import net.ossrs.rtmp.ConnectionParams;
 import net.ossrs.rtmp.SrsFlvMuxer;
 
 import java.nio.ByteBuffer;
@@ -87,11 +88,6 @@ public class RtmpDisplay extends DisplayBase {
     srsFlvMuxer.resetDroppedVideoFrames();
   }
 
-  @Override
-  public void setAuthorization(String user, String password) {
-    srsFlvMuxer.setAuthorization(user, password);
-  }
-
   /**
    * Some Livestream hosts use Akamai auth that requires RTMP packets to be sent with increasing
    * timestamp order regardless of packet type.
@@ -110,13 +106,13 @@ public class RtmpDisplay extends DisplayBase {
   }
 
   @Override
-  protected void startStreamRtp(String url) {
+  protected void startStreamRtp(ConnectionParams params) {
     if (videoEncoder.getRotation() == 90 || videoEncoder.getRotation() == 270) {
       srsFlvMuxer.setVideoResolution(videoEncoder.getHeight(), videoEncoder.getWidth());
     } else {
       srsFlvMuxer.setVideoResolution(videoEncoder.getWidth(), videoEncoder.getHeight());
     }
-    srsFlvMuxer.start(url);
+    srsFlvMuxer.start(params);
   }
 
   @Override

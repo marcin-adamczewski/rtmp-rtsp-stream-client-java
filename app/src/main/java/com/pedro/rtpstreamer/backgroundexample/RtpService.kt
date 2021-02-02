@@ -16,6 +16,7 @@ import com.pedro.rtplibrary.rtmp.RtmpCamera2
 import com.pedro.rtplibrary.rtsp.RtspCamera2
 import com.pedro.rtplibrary.view.OpenGlView
 import com.pedro.rtpstreamer.R
+import net.ossrs.rtmp.ConnectionParams
 
 
 /**
@@ -171,7 +172,7 @@ class RtpService : Service() {
   private fun startStreamRtp(endpoint: String) {
     if (!camera2Base!!.isStreaming) {
       if (camera2Base!!.prepareVideo() && camera2Base!!.prepareAudio()) {
-        camera2Base!!.startStream(endpoint)
+        camera2Base!!.startStream(ConnectionParams.simple(endpoint))
       }
     } else {
       showNotification("You are already streaming :(")

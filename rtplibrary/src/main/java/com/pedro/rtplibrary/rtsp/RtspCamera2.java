@@ -16,6 +16,8 @@ import com.pedro.rtsp.rtsp.RtspClient;
 import com.pedro.rtsp.rtsp.VideoCodec;
 import com.pedro.rtsp.utils.ConnectCheckerRtsp;
 
+import net.ossrs.rtmp.ConnectionParams;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -143,8 +145,8 @@ public class RtspCamera2 extends Camera2Base {
   }
 
   @Override
-  protected void startStreamRtp(String url) {
-    rtspClient.connect(url);
+  protected void startStreamRtp(ConnectionParams params) {
+    rtspClient.connect(params);
   }
 
   @Override

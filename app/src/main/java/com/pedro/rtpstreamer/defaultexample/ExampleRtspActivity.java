@@ -15,6 +15,9 @@ import com.pedro.encoder.input.video.CameraOpenException;
 import com.pedro.rtplibrary.rtsp.RtspCamera1;
 import com.pedro.rtpstreamer.R;
 import com.pedro.rtsp.utils.ConnectCheckerRtsp;
+
+import net.ossrs.rtmp.ConnectionParams;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -130,7 +133,7 @@ public class ExampleRtspActivity extends AppCompatActivity
           if (rtspCamera1.isRecording()
               || rtspCamera1.prepareAudio() && rtspCamera1.prepareVideo()) {
             button.setText(R.string.stop_button);
-            rtspCamera1.startStream(etUrl.getText().toString());
+            rtspCamera1.startStream(ConnectionParams.simple(etUrl.getText().toString()));
           } else {
             Toast.makeText(this, "Error preparing stream, This device cant do it",
                 Toast.LENGTH_SHORT).show();

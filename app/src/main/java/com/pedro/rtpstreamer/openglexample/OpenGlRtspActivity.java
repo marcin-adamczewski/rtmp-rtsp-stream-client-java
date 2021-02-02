@@ -78,6 +78,8 @@ import java.util.Locale;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
+import net.ossrs.rtmp.ConnectionParams;
+
 /**
  * More documentation see:
  * {@link com.pedro.rtplibrary.base.Camera1Base}
@@ -402,7 +404,7 @@ public class OpenGlRtspActivity extends AppCompatActivity
           if (rtspCamera1.isRecording()
               || rtspCamera1.prepareAudio() && rtspCamera1.prepareVideo()) {
             button.setText(R.string.stop_button);
-            rtspCamera1.startStream(etUrl.getText().toString());
+            rtspCamera1.startStream(ConnectionParams.simple(etUrl.getText().toString()));
           } else {
             Toast.makeText(this, "Error preparing stream, This device cant do it",
                 Toast.LENGTH_SHORT).show();

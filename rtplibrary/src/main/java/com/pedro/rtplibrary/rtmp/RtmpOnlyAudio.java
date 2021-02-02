@@ -4,6 +4,7 @@ import android.media.MediaCodec;
 import com.pedro.rtplibrary.base.OnlyAudioBase;
 import java.nio.ByteBuffer;
 import net.ossrs.rtmp.ConnectCheckerRtmp;
+import net.ossrs.rtmp.ConnectionParams;
 import net.ossrs.rtmp.SrsFlvMuxer;
 
 /**
@@ -71,11 +72,6 @@ public class RtmpOnlyAudio extends OnlyAudioBase {
     srsFlvMuxer.resetDroppedVideoFrames();
   }
 
-  @Override
-  public void setAuthorization(String user, String password) {
-    srsFlvMuxer.setAuthorization(user, password);
-  }
-
   /**
    * Some Livestream hosts use Akamai auth that requires RTMP packets to be sent with increasing
    * timestamp order regardless of packet type.
@@ -94,8 +90,8 @@ public class RtmpOnlyAudio extends OnlyAudioBase {
   }
 
   @Override
-  protected void startStreamRtp(String url) {
-    srsFlvMuxer.start(url);
+  protected void startStreamRtp(ConnectionParams params) {
+    srsFlvMuxer.start(params);
   }
 
   @Override

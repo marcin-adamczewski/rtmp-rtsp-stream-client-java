@@ -26,6 +26,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import net.ossrs.rtmp.ConnectCheckerRtmp;
+import net.ossrs.rtmp.ConnectionParams;
 
 /**
  * More documentation see:
@@ -161,7 +162,7 @@ public class RtmpFromFileActivity extends AppCompatActivity
             if (!rtmpFromFile.isRecording()) {
               if (prepare()) {
                 button.setText(R.string.stop_button);
-                rtmpFromFile.startStream(etUrl.getText().toString());
+                rtmpFromFile.startStream(ConnectionParams.simple(etUrl.getText().toString()));
                 seekBar.setMax(Math.max((int) rtmpFromFile.getVideoDuration(),
                     (int) rtmpFromFile.getAudioDuration()));
                 updateProgress();
@@ -176,7 +177,7 @@ public class RtmpFromFileActivity extends AppCompatActivity
               }
             } else {
               button.setText(R.string.stop_button);
-              rtmpFromFile.startStream(etUrl.getText().toString());
+              rtmpFromFile.startStream(ConnectionParams.simple(etUrl.getText().toString()));
             }
           } catch (IOException e) {
             //Normally this error is for file not found or read permissions

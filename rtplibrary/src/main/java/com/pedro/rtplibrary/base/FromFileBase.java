@@ -34,6 +34,8 @@ import com.pedro.rtplibrary.view.LightOpenGlView;
 import com.pedro.rtplibrary.view.OffScreenGlThread;
 import com.pedro.rtplibrary.view.OpenGlView;
 
+import net.ossrs.rtmp.ConnectionParams;
+
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -123,14 +125,6 @@ public abstract class FromFileBase
   public void setFpsListener(FpsListener.Callback callback) {
     fpsListener.setCallback(callback);
   }
-
-  /**
-   * Basic auth developed to work with Wowza. No tested with other server
-   *
-   * @param user auth.
-   * @param password auth.
-   */
-  public abstract void setAuthorization(String user, String password);
 
   /**
    * @param filePath to video MP4 file.
@@ -268,12 +262,12 @@ public abstract class FromFileBase
     if (!streaming) stopStream();
   }
 
-  protected abstract void startStreamRtp(String url);
+  protected abstract void startStreamRtp(ConnectionParams params);
 
   /**
    * Need be called after @prepareVideo.
    *
-   * @param url of the stream like:
+   * @param params contains url of the stream like:
    * protocol://ip:port/application/streamName
    *
    * RTSP: rtsp://192.168.1.1:1935/live/pedroSG94
@@ -281,14 +275,14 @@ public abstract class FromFileBase
    * RTMP: rtmp://192.168.1.1:1935/live/pedroSG94
    * RTMPS: rtmps://192.168.1.1:1935/live/pedroSG94
    */
-  public void startStream(String url) {
+  public void startStream(ConnectionParams params) {
     streaming = true;
     if (!recordController.isRunning()) {
       startEncoders();
     } else {
       if (videoEnabled) resetVideoEncoder();
     }
-    startStreamRtp(url);
+    startStreamRtp(params);
   }
 
   private void startEncoders() {
