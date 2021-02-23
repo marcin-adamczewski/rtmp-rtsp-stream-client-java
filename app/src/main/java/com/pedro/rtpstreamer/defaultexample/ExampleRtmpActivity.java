@@ -51,7 +51,8 @@ public class ExampleRtmpActivity extends AppCompatActivity
     Button switchCamera = findViewById(R.id.switch_camera);
     switchCamera.setOnClickListener(this);
     etUrl = findViewById(R.id.et_rtp_url);
-    etUrl.setHint(R.string.hint_rtmp);
+    etUrl.setText("rtmp://zumbalive-zrts01-pri-rts.llnw.net/zumbalive/zrts01_1000");
+    ((EditText)(findViewById(R.id.et_rtp_user))).setText("zrts01");
     rtmpCamera1 = new RtmpCamera1(surfaceView, this);
     rtmpCamera1.setReTries(10);
     surfaceView.getHolder().addCallback(this);
@@ -128,6 +129,10 @@ public class ExampleRtmpActivity extends AppCompatActivity
           if (rtmpCamera1.isRecording()
               || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo()) {
             button.setText(R.string.stop_button);
+            rtmpCamera1.setAuthorization(
+                    ((EditText) findViewById(R.id.et_rtp_user)).getText().toString(),
+                    ((EditText) findViewById(R.id.et_rtp_pass)).getText().toString()
+            );
             rtmpCamera1.startStream(etUrl.getText().toString());
           } else {
             Toast.makeText(this, "Error preparing stream, This device cant do it",

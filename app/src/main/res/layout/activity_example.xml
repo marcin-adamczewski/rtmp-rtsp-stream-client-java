@@ -17,8 +17,35 @@
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:gravity="center"
+      android:hint="url"
       android:layout_margin="20dp"
       android:id="@+id/et_rtp_url"
+      />
+
+  <EditText
+      android:textColor="@color/appColor"
+      android:textColorHint="@color/appColor"
+      android:inputType="textUri"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:gravity="center"
+      android:hint="User"
+      android:layout_below="@+id/et_rtp_url"
+      android:layout_margin="10dp"
+      android:id="@+id/et_rtp_user"
+      />
+
+  <EditText
+      android:textColor="@color/appColor"
+      android:textColorHint="@color/appColor"
+      android:inputType="textUri"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:gravity="center"
+      android:hint="Password"
+      android:layout_below="@+id/et_rtp_user"
+      android:layout_margin="10dp"
+      android:id="@+id/et_rtp_pass"
       />
 
   <LinearLayout
